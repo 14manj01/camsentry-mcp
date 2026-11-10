@@ -1,0 +1,25 @@
+# Secrets: this project never needs any of these, so none may be committed.
+.env
+.env.*
+*.pem
+*.key
+*.p12
+*token*.json
+*credentials*.json
+*secret*
+
+# Python
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+build/
+dist/
+
+# Editors / OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
