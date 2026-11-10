@@ -37,12 +37,24 @@ shows up"*, and it answers from what your cameras actually recorded.
 
 ## Why this one
 
-| | |
-| --- | --- |
-| 🖥️ **Local vision** | Frames are analysed on your machine by a small vision model (default `gemma3:4b`, 3.3 GB) through Ollama, LM Studio or llama.cpp. A non-local endpoint is refused unless you opt in. |
-| 🔐 **No stored passwords** | Your Wyze password and API key are typed once into a terminal prompt and discarded. Only session tokens are kept, in your operating system keychain. Never in files, environment variables or MCP configs. |
-| 👀 **Read-only** | There is no tool that can switch a camera off, unlock anything or change a Wyze setting. |
-| 💬 **Works with text-only models** | Detection results come back as plain JSON, so the chat model driving the tools does not need vision. |
+<table>
+  <tr>
+    <td width="28%">🖥️ <b>Local vision</b></td>
+    <td>Frames are analysed on your machine by a small vision model (default <code>gemma3:4b</code>, 3.3 GB) through Ollama, LM Studio or llama.cpp. A non-local endpoint is refused unless you opt in.</td>
+  </tr>
+  <tr>
+    <td>🔐 <b>No stored passwords</b></td>
+    <td>Your Wyze password and API key are typed once into a terminal prompt and discarded. Only session tokens are kept, in your operating system keychain. Never in files, environment variables or MCP configs.</td>
+  </tr>
+  <tr>
+    <td>👀 <b>Read-only</b></td>
+    <td>There is no tool that can switch a camera off, unlock anything or change a Wyze setting.</td>
+  </tr>
+  <tr>
+    <td>💬 <b>Works with text-only models</b></td>
+    <td>Detection results come back as plain JSON, so the chat model driving the tools does not need vision.</td>
+  </tr>
+</table>
 
 ## How it works
 
