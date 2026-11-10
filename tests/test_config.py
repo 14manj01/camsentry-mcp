@@ -2,7 +2,7 @@ from datetime import time
 
 import pytest
 
-from wyze_cam_mcp.config import ArmedHours, ConfigError, Settings
+from camsentry_mcp.config import ArmedHours, ConfigError, Settings
 
 
 @pytest.mark.parametrize(
@@ -26,17 +26,17 @@ def test_malformed_armed_hours_are_rejected(text: str) -> None:
 
 @pytest.mark.parametrize("url", ["http://localhost:1234/v1", "http://127.0.0.1:11434/v1", "http://[::1]:8080/v1"])
 def test_loopback_vision_endpoints_are_accepted(url: str) -> None:
-    assert Settings.from_env({"WYZE_CAM_VISION_URL": url}).vision_url == url
+    assert Settings.from_env({"CAMSENTRY_VISION_URL": url}).vision_url == url
 
 
 @pytest.mark.parametrize("url", ["https://api.openai.com/v1", "http://192.168.1.20:11434/v1", "http://localhost.evil.com/v1"])
 def test_remote_vision_endpoint_needs_explicit_opt_in(url: str) -> None:
     with pytest.raises(ConfigError, match="leave"):
-        Settings.from_env({"WYZE_CAM_VISION_URL": url})
-    allowed = Settings.from_env({"WYZE_CAM_VISION_URL": url, "WYZE_CAM_ALLOW_REMOTE_VISION": "1"})
+        Settings.from_env({"CAMSENTRY_VISION_URL": url})
+    allowed = Settings.from_env({"CAMSENTRY_VISION_URL": url, "CAMSENTRY_ALLOW_REMOTE_VISION": "1"})
     assert allowed.vision_url == url
 
 
 def test_urls_with_embedded_credentials_are_rejected() -> None:
     with pytest.raises(ConfigError, match="credentials"):
-        Settings.from_env({"WYZE_CAM_BRIDGE_URL": "http://admin:hunter2@192.168.1.5:5080"})
+        Settings.from_env({"CAMSENTRY_BRIDGE_URL": "http://admin:hunter2@192.168.1.5:5080"})

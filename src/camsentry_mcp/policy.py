@@ -20,7 +20,7 @@ _PACKAGE_TAGS = {"Package"}
 class ArmState:
     """Whether a person on camera should be treated as an intruder.
 
-    "schedule" follows WYZE_CAM_ARMED_HOURS (never armed when unset); "on" and "off" override it
+    "schedule" follows CAMSENTRY_ARMED_HOURS (never armed when unset); "on" and "off" override it
     until changed or the server restarts.
     """
 

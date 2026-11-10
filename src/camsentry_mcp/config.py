@@ -32,7 +32,7 @@ class ArmedHours:
             start_text, end_text = text.split("-")
             return cls(time.fromisoformat(start_text.strip()), time.fromisoformat(end_text.strip()))
         except ValueError:
-            raise ConfigError(f"WYZE_CAM_ARMED_HOURS must look like '22:00-06:00', got {text!r}") from None
+            raise ConfigError(f"CAMSENTRY_ARMED_HOURS must look like '22:00-06:00', got {text!r}") from None
 
     def contains(self, moment: time) -> bool:
         if self.start < self.end:
@@ -74,17 +74,17 @@ class Settings:
 
     @classmethod
     def from_env(cls, env: Mapping[str, str]) -> Settings:
-        vision_url = _http_url("WYZE_CAM_VISION_URL", env.get("WYZE_CAM_VISION_URL") or DEFAULT_VISION_URL)
-        if not is_loopback_url(vision_url) and env.get("WYZE_CAM_ALLOW_REMOTE_VISION") != "1":
+        vision_url = _http_url("CAMSENTRY_VISION_URL", env.get("CAMSENTRY_VISION_URL") or DEFAULT_VISION_URL)
+        if not is_loopback_url(vision_url) and env.get("CAMSENTRY_ALLOW_REMOTE_VISION") != "1":
             raise ConfigError(
-                f"WYZE_CAM_VISION_URL ({vision_url}) is not on this machine. Camera images would leave "
-                "this computer. Set WYZE_CAM_ALLOW_REMOTE_VISION=1 only if you trust that host."
+                f"CAMSENTRY_VISION_URL ({vision_url}) is not on this machine. Camera images would leave "
+                "this computer. Set CAMSENTRY_ALLOW_REMOTE_VISION=1 only if you trust that host."
             )
-        bridge = env.get("WYZE_CAM_BRIDGE_URL")
-        hours = env.get("WYZE_CAM_ARMED_HOURS")
+        bridge = env.get("CAMSENTRY_BRIDGE_URL")
+        hours = env.get("CAMSENTRY_ARMED_HOURS")
         return cls(
             vision_url=vision_url,
-            vision_model=env.get("WYZE_CAM_VISION_MODEL") or DEFAULT_VISION_MODEL,
-            bridge_url=_http_url("WYZE_CAM_BRIDGE_URL", bridge) if bridge else None,
+            vision_model=env.get("CAMSENTRY_VISION_MODEL") or DEFAULT_VISION_MODEL,
+            bridge_url=_http_url("CAMSENTRY_BRIDGE_URL", bridge) if bridge else None,
             armed_hours=ArmedHours.parse(hours) if hours else None,
         )

@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 360" width="1280" height="360" role="img" aria-label="wyze-cam-mcp: let a local model watch your Wyze cameras for people, pets, packages and intruders">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 360" width="1280" height="360" role="img" aria-label="camsentry-mcp: let a local model watch your Wyze cameras for people, pets, packages and intruders">
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
       <stop offset="0" stop-color="#0b1220"/>
@@ -28,7 +28,7 @@
   </g>
 
   <g font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif">
-    <text x="72" y="176" font-size="64" font-weight="800" fill="#f8fafc" letter-spacing="-1">wyze-cam-mcp</text>
+    <text x="72" y="176" font-size="64" font-weight="800" fill="#f8fafc" letter-spacing="-1">camsentry-mcp</text>
     <text x="72" y="218" font-size="24" fill="#a5b4c8">Let a local model watch your Wyze cameras.</text>
 
     <!-- detection chips -->

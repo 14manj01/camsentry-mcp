@@ -6,10 +6,10 @@ import pytest
 from keyring.backend import KeyringBackend
 from keyring.errors import PasswordDeleteError
 
-from wyze_cam_mcp.credentials import SecretStore
-from wyze_cam_mcp.images import ImageError
-from wyze_cam_mcp.vision import Detection, VisionError
-from wyze_cam_mcp.wyze import Camera, CameraEvent
+from camsentry_mcp.credentials import SecretStore
+from camsentry_mcp.images import ImageError
+from camsentry_mcp.vision import Detection, VisionError
+from camsentry_mcp.wyze import Camera, CameraEvent
 
 JPEG = b"\xff\xd8\xff\xe0" + b"\x00" * 32
 

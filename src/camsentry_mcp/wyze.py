@@ -25,8 +25,8 @@ _PAGE = 20  # Wyze caps event queries at 20 per request.
 # Wyze's image gateway (prod-sight-safe-auth.wyze.com) authorises by the signed URL alone, but answers
 # 401 "Access token is invalid" unless the request looks like the Android app's HTTP client.
 _IMAGE_HEADERS = {"User-Agent": "okhttp/4.9.3"}
-_NOT_LOGGED_IN = "Not connected to Wyze. Run `wyze-cam-mcp login` in a terminal."
-_SESSION_EXPIRED = "The Wyze session expired. Run `wyze-cam-mcp login` in a terminal."
+_NOT_LOGGED_IN = "Not connected to Wyze. Run `camsentry-mcp login` in a terminal."
+_SESSION_EXPIRED = "The Wyze session expired. Run `camsentry-mcp login` in a terminal."
 
 
 class NotLoggedIn(Exception):

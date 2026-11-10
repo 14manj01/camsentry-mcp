@@ -12,7 +12,7 @@ from dataclasses import dataclass, field
 import keyring
 from keyring.backend import KeyringBackend
 
-SERVICE = "wyze-cam-mcp"
+SERVICE = "camsentry-mcp"
 _TOKENS = "wyze-tokens"
 _BRIDGE = "bridge-auth"
 # Windows Credential Manager rejects secrets longer than 1280 UTF-16 code units.
@@ -41,7 +41,7 @@ def _require_secure(backend: KeyringBackend) -> None:
     if insecure or "plaintext" in kind.__name__.lower():
         raise CredentialStoreError(
             f"No secure OS keychain is available (found {kind.__module__}.{kind.__name__}). "
-            "wyze-cam-mcp refuses to store Wyze tokens unencrypted. Use Windows Credential Manager, "
+            "camsentry-mcp refuses to store Wyze tokens unencrypted. Use Windows Credential Manager, "
             "macOS Keychain, or a Secret Service provider such as GNOME Keyring or KWallet."
         )
 

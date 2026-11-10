@@ -140,7 +140,7 @@ class VisionDetector:
         except httpx.TimeoutException:
             raise VisionError(
                 f"The vision model '{self._model}' did not answer within {_TIMEOUT_SECONDS:.0f} seconds. "
-                "Use a smaller vision model (WYZE_CAM_VISION_MODEL)."
+                "Use a smaller vision model (CAMSENTRY_VISION_MODEL)."
             ) from None
         except httpx.HTTPError:
             raise VisionError(
@@ -149,7 +149,7 @@ class VisionDetector:
         if response.status_code == 404:
             raise VisionError(
                 f"Vision model '{self._model}' is not available at {self._base_url}. Pull it "
-                f"(for Ollama: `ollama pull {self._model}`) or set WYZE_CAM_VISION_MODEL to a vision model you have."
+                f"(for Ollama: `ollama pull {self._model}`) or set CAMSENTRY_VISION_MODEL to a vision model you have."
             )
         if response.status_code != 200:
             raise VisionError(f"The vision model server returned HTTP {response.status_code}.")

@@ -121,7 +121,7 @@ class CameraWatch:
             if event is None:
                 raise WatchError(
                     f"Camera {camera.name!r} has no event image from the last 24 hours. A live view "
-                    "needs a wyze-bridge (WYZE_CAM_BRIDGE_URL)."
+                    "needs a wyze-bridge (CAMSENTRY_BRIDGE_URL)."
                 )
         data, mime = self._wyze.event_image(event)
         return event, event.time, data, mime

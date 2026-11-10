@@ -3,9 +3,9 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "wyze-cam-mcp"
+name = "camsentry-mcp"
 version = "0.1.0"
-description = "Read-only MCP server that lets a local model watch Wyze cameras and detect people, pets, packages and intruders."
+description = "Unofficial read-only MCP server that lets a local model watch Wyze cameras and detect people, pets, packages and intruders."
 readme = "README.md"
 license = "MIT"
 license-files = ["LICENSE"]
@@ -23,10 +23,10 @@ dependencies = [
 dev = ["pytest>=8"]
 
 [project.scripts]
-wyze-cam-mcp = "wyze_cam_mcp.cli:main"
+camsentry-mcp = "camsentry_mcp.cli:main"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/wyze_cam_mcp"]
+packages = ["src/camsentry_mcp"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

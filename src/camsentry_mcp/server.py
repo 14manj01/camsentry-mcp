@@ -51,7 +51,7 @@ def _reported[**P, R](tool: Callable[P, R]) -> Callable[P, R]:
 
 
 def build_server(watch: CameraWatch) -> MCPServer:
-    server = MCPServer("wyze-cam", instructions=_INSTRUCTIONS, version=__version__)
+    server = MCPServer("camsentry", instructions=_INSTRUCTIONS, version=__version__)
 
     @server.tool(annotations=_READ_ONLY)
     @_reported

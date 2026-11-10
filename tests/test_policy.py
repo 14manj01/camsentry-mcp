@@ -1,7 +1,7 @@
 from conftest import at
-from wyze_cam_mcp.config import ArmedHours
-from wyze_cam_mcp.policy import ArmState, build_alerts
-from wyze_cam_mcp.vision import Detection
+from camsentry_mcp.config import ArmedHours
+from camsentry_mcp.policy import ArmState, build_alerts
+from camsentry_mcp.vision import Detection
 
 
 def detection(people: int = 0, pets: tuple[str, ...] = (), packages: int = 0, suspicious: bool = False, reason: str = "") -> Detection:

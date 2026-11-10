@@ -5,7 +5,7 @@ import httpx
 import pytest
 
 from conftest import JPEG
-from wyze_cam_mcp.vision import Detection, VisionDetector, VisionError, parse_detection
+from camsentry_mcp.vision import Detection, VisionDetector, VisionError, parse_detection
 
 ANSWER = {
     "people": 1,

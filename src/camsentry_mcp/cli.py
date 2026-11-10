@@ -121,7 +121,7 @@ def _status(store: SecretStore) -> int:
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
-        prog="wyze-cam-mcp",
+        prog="camsentry-mcp",
         description="MCP server that lets a local model watch Wyze cameras. Runs the server when no command is given.",
     )
     parser.add_argument("--version", action="version", version=__version__)
@@ -148,7 +148,7 @@ def main(argv: list[str] | None = None) -> int:
             return _bridge_auth(store, args.clear)
         return _status(store)
     except (ConfigError, CredentialStoreError) as err:
-        print(f"wyze-cam-mcp: {err}", file=sys.stderr)
+        print(f"camsentry-mcp: {err}", file=sys.stderr)
         return 2
 
 

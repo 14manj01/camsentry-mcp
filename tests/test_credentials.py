@@ -2,7 +2,7 @@ import pytest
 from keyring.backends.fail import Keyring as FailKeyring
 
 from conftest import MemoryKeyring
-from wyze_cam_mcp.credentials import BridgeAuth, CredentialStoreError, SecretStore, Tokens
+from camsentry_mcp.credentials import BridgeAuth, CredentialStoreError, SecretStore, Tokens
 
 # Windows Credential Manager rejects any single secret longer than this.
 WINDOWS_LIMIT = 1280
@@ -35,7 +35,7 @@ def test_clearing_tokens_removes_every_entry_but_keeps_bridge_auth(store: Secret
 
 def test_partially_deleted_tokens_read_as_signed_out(store: SecretStore, keyring_backend: MemoryKeyring) -> None:
     store.save_tokens(Tokens("a" * 3500, "refresh"))
-    keyring_backend.delete_password("wyze-cam-mcp", "wyze-tokens.1")
+    keyring_backend.delete_password("camsentry-mcp", "wyze-tokens.1")
     assert store.load_tokens() is None
 
 

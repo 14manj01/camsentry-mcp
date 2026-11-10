@@ -12,10 +12,10 @@ from wyze_sdk.models.devices import DeviceParser
 from wyze_sdk.models.events import Event
 
 from conftest import JPEG
-from wyze_cam_mcp.credentials import SecretStore, Tokens
-from wyze_cam_mcp.images import ImageError
-from wyze_cam_mcp.server import quiet_library_logging
-from wyze_cam_mcp.wyze import NotLoggedIn, WyzeCloud, WyzeError
+from camsentry_mcp.credentials import SecretStore, Tokens
+from camsentry_mcp.images import ImageError
+from camsentry_mcp.server import quiet_library_logging
+from camsentry_mcp.wyze import NotLoggedIn, WyzeCloud, WyzeError
 
 EXPIRED = {"code": "2001", "msg": "AccessTokenError"}
 NOW = datetime(2026, 3, 1, 12, 0).astimezone()
@@ -111,7 +111,7 @@ def cloud(store: SecretStore, account: FakeAccount, handler=None) -> WyzeCloud:
 
 
 def test_without_stored_tokens_the_user_is_told_to_log_in(store: SecretStore, account: FakeAccount) -> None:
-    with pytest.raises(NotLoggedIn, match="wyze-cam-mcp login"):
+    with pytest.raises(NotLoggedIn, match="camsentry-mcp login"):
         cloud(store, account).cameras()
 
 

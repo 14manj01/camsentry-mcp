@@ -12,23 +12,23 @@ images into an issue.
 
 | Secret | Where it goes |
 | --- | --- |
-| Wyze password, API Key ID, API Key, 2FA code | Typed into `wyze-cam-mcp login`, sent to Wyze over TLS once, then discarded. Never stored, never accepted from environment variables, files or MCP tool arguments. |
+| Wyze password, API Key ID, API Key, 2FA code | Typed into `camsentry-mcp login`, sent to Wyze over TLS once, then discarded. Never stored, never accepted from environment variables, files or MCP tool arguments. |
 | Wyze access and refresh tokens | OS keychain only (Windows Credential Manager, macOS Keychain, Secret Service). Rotated tokens are written back to the keychain. |
-| wyze-bridge username/password (optional) | OS keychain only, via `wyze-cam-mcp bridge-auth`. |
+| wyze-bridge username/password (optional) | OS keychain only, via `camsentry-mcp bridge-auth`. |
 
 - The project never writes a secret to disk itself, so there is no `.env`, token cache or config file that
   could end up in a commit, a backup or a bug report. An MCP client config for this server contains no secrets.
 - If the only available keychain backend is missing or stores plaintext, the server and CLI refuse to run
   rather than degrade.
-- `wyze-cam-mcp logout` revokes the session at Wyze and deletes the keychain entries.
-- If you believe a token leaked, run `wyze-cam-mcp logout`, delete the API key in the Wyze developer
+- `camsentry-mcp logout` revokes the session at Wyze and deletes the keychain entries.
+- If you believe a token leaked, run `camsentry-mcp logout`, delete the API key in the Wyze developer
   console, and change your Wyze password.
 
 ### Camera images
 
 - Frames are held in memory only and are sent to exactly one place: the vision endpoint you configured.
 - The vision endpoint must be a loopback address (`127.0.0.0/8`, `::1`, `localhost`). Anything else is
-  rejected at startup unless `WYZE_CAM_ALLOW_REMOTE_VISION=1` is set. Requests to the vision endpoint and
+  rejected at startup unless `CAMSENTRY_ALLOW_REMOTE_VISION=1` is set. Requests to the vision endpoint and
   the bridge ignore proxy environment variables.
 - `view_camera` returns a frame to the MCP client. If that client forwards conversations to a cloud model,
   the image goes with it. Use a local model, or do not call `view_camera`.

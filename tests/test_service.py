@@ -8,12 +8,12 @@ import pytest
 from mcp.server.mcpserver.exceptions import ToolError
 
 from conftest import FakeBridge, FakeDetector, FakeWyze, at, event
-from wyze_cam_mcp.config import ArmedHours
-from wyze_cam_mcp.policy import ArmState
-from wyze_cam_mcp.server import build_server
-from wyze_cam_mcp.service import CameraWatch, WatchError
-from wyze_cam_mcp.vision import Detection
-from wyze_cam_mcp.wyze import Camera, NotLoggedIn
+from camsentry_mcp.config import ArmedHours
+from camsentry_mcp.policy import ArmState
+from camsentry_mcp.server import build_server
+from camsentry_mcp.service import CameraWatch, WatchError
+from camsentry_mcp.vision import Detection
+from camsentry_mcp.wyze import Camera, NotLoggedIn
 
 CAMERAS = [Camera("MAC1", "Front Door", "HL_CAM4", True), Camera("MAC2", "Backyard", "WYZE_CAKP2JFUS", True)]
 PERSON = Detection(1, (), 0, False, "", "A person stands at the door.")
@@ -140,7 +140,7 @@ def test_with_a_bridge_a_live_frame_is_analysed() -> None:
 
 def test_no_recent_image_and_no_bridge_is_explained() -> None:
     watch, *_ = make([])
-    with pytest.raises(WatchError, match="WYZE_CAM_BRIDGE_URL"):
+    with pytest.raises(WatchError, match="CAMSENTRY_BRIDGE_URL"):
         watch.view("Front Door", None)
 
 
@@ -192,10 +192,10 @@ def test_tool_shows_the_login_hint_to_the_model_when_signed_out() -> None:
     watch, wyze, *_ = make([])
 
     def signed_out() -> list[Camera]:
-        raise NotLoggedIn("Not connected to Wyze. Run `wyze-cam-mcp login` in a terminal.")
+        raise NotLoggedIn("Not connected to Wyze. Run `camsentry-mcp login` in a terminal.")
 
     wyze.cameras = signed_out
-    with pytest.raises(ToolError, match="wyze-cam-mcp login"):
+    with pytest.raises(ToolError, match="camsentry-mcp login"):
         call(watch, "list_cameras", {})
 
 

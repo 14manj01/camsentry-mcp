@@ -1,9 +1,9 @@
 <p align="center">
-  <img src="docs/banner.svg" alt="wyze-cam-mcp: let a local model watch your Wyze cameras for people, pets, packages and intruders" width="100%">
+  <img src="docs/banner.svg" alt="camsentry-mcp: let a local model watch your Wyze cameras for people, pets, packages and intruders" width="100%">
 </p>
 
 <p align="center">
-  <a href="https://github.com/14manj01/wyze-cam-mcp/actions/workflows/ci.yml"><img src="https://github.com/14manj01/wyze-cam-mcp/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="https://github.com/14manj01/camsentry-mcp/actions/workflows/ci.yml"><img src="https://github.com/14manj01/camsentry-mcp/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue" alt="MIT license"></a>
   <img src="https://img.shields.io/badge/python-3.12%20%E2%80%93%203.14-3776AB?logo=python&logoColor=white" alt="Python 3.12 to 3.14">
   <a href="https://modelcontextprotocol.io"><img src="https://img.shields.io/badge/MCP-stdio%20server-111827" alt="MCP stdio server"></a>
@@ -22,9 +22,14 @@
 
 ---
 
-**wyze-cam-mcp** is an [MCP](https://modelcontextprotocol.io) server that gives a local model eyes on your
-Wyze cameras. Ask it *"is there a package at the front door?"* or *"arm the cameras and tell me if anyone
-shows up"*, and it answers from what your cameras actually recorded.
+**camsentry-mcp** is an unofficial [MCP](https://modelcontextprotocol.io) server that gives a local model
+eyes on Wyze cameras. Ask it *"is there a package at the front door?"* or *"arm the cameras and tell me if
+anyone shows up"*, and it answers from what your cameras actually recorded.
+
+> [!NOTE]
+> **Independent project.** camsentry-mcp is not affiliated with, endorsed by or sponsored by Wyze Labs, Inc.
+> "Wyze" and "Wyze Cam" are trademarks of Wyze Labs, Inc., used here only to say which cameras this
+> software works with.
 
 <table>
   <tr>
@@ -60,7 +65,7 @@ shows up"*, and it answers from what your cameras actually recorded.
 
 ```mermaid
 flowchart LR
-    M[Local model + MCP client] -- stdio --> S[wyze-cam-mcp]
+    M[Local model + MCP client] -- stdio --> S[camsentry-mcp]
     S -- session tokens from OS keychain --> W[Wyze cloud: cameras, events, event images]
     S -- frame --> V[Local vision model, 127.0.0.1]
     S -. optional live frame .-> B[wyze-bridge on your LAN]
@@ -74,8 +79,8 @@ and an OS keychain (Windows Credential Manager, macOS Keychain, or GNOME Keyring
 **1. Install**
 
 ```sh
-pipx install git+https://github.com/14manj01/wyze-cam-mcp
-# or: uv tool install git+https://github.com/14manj01/wyze-cam-mcp
+pipx install git+https://github.com/14manj01/camsentry-mcp
+# or: uv tool install git+https://github.com/14manj01/camsentry-mcp
 ```
 
 **2. Get a small vision model**
@@ -91,7 +96,7 @@ It analyses a frame in about a second on a GPU that fits it.
 Create a free API key at <https://developer-api-console.wyze.com/#/apikey/view>, then:
 
 ```sh
-wyze-cam-mcp login
+camsentry-mcp login
 ```
 
 You are asked for your Wyze email, password, API Key ID and API Key (and a 2FA code if your account uses
@@ -99,8 +104,8 @@ one). They are exchanged for session tokens, the tokens are saved to the OS keyc
 API key are discarded.
 
 ```sh
-wyze-cam-mcp status    # checks the Wyze session, the vision model and your settings
-wyze-cam-mcp logout    # revokes the session with Wyze and deletes the tokens
+camsentry-mcp status    # checks the Wyze session, the vision model and your settings
+camsentry-mcp logout    # revokes the session with Wyze and deletes the tokens
 ```
 
 **4. Add it to your MCP client**
@@ -111,11 +116,11 @@ There are no secrets in this block, so it is safe to share or commit:
 ```json
 {
   "mcpServers": {
-    "wyze-cam": {
-      "command": "wyze-cam-mcp",
+    "camsentry": {
+      "command": "camsentry-mcp",
       "env": {
-        "WYZE_CAM_VISION_MODEL": "gemma3:4b",
-        "WYZE_CAM_ARMED_HOURS": "22:00-06:00"
+        "CAMSENTRY_VISION_MODEL": "gemma3:4b",
+        "CAMSENTRY_ARMED_HOURS": "22:00-06:00"
       }
     }
   }
@@ -169,7 +174,7 @@ There are no secrets in this block, so it is safe to share or commit:
 | 🧍 `person` | The local vision model sees a person, or Wyze tagged the event. |
 | 🐾 `pet` | The local vision model sees an animal, or Wyze tagged the event. |
 | 📦 `package` | The local vision model sees an unattended parcel, or Wyze tagged the event. |
-| 🚨 `intruder` | A person is detected while the system is armed (`WYZE_CAM_ARMED_HOURS`, or `set_armed on`), **or** the vision model flags clearly suspicious behaviour such as testing a door or taking a package. |
+| 🚨 `intruder` | A person is detected while the system is armed (`CAMSENTRY_ARMED_HOURS`, or `set_armed on`), **or** the vision model flags clearly suspicious behaviour such as testing a door or taking a package. |
 
 Wyze's own tags need Cam Plus; the local model does not.
 
@@ -188,11 +193,11 @@ All optional, all non-secret environment variables.
 
 | Variable | Default | Meaning |
 | --- | --- | --- |
-| `WYZE_CAM_VISION_URL` | `http://127.0.0.1:11434/v1` | OpenAI-compatible endpoint of your local vision model server. |
-| `WYZE_CAM_VISION_MODEL` | `gemma3:4b` | Vision model name on that server. |
-| `WYZE_CAM_ALLOW_REMOTE_VISION` | unset | Set to `1` to allow a vision endpoint that is not on this machine. Camera frames will be sent there. |
-| `WYZE_CAM_ARMED_HOURS` | unset | Daily local-time window, e.g. `22:00-06:00`, in which any person is an intruder. |
-| `WYZE_CAM_BRIDGE_URL` | unset | Base URL of a [wyze-bridge](https://github.com/IDisposable/docker-wyze-bridge), e.g. `http://192.168.1.50:5080`, for live frames. |
+| `CAMSENTRY_VISION_URL` | `http://127.0.0.1:11434/v1` | OpenAI-compatible endpoint of your local vision model server. |
+| `CAMSENTRY_VISION_MODEL` | `gemma3:4b` | Vision model name on that server. |
+| `CAMSENTRY_ALLOW_REMOTE_VISION` | unset | Set to `1` to allow a vision endpoint that is not on this machine. Camera frames will be sent there. |
+| `CAMSENTRY_ARMED_HOURS` | unset | Daily local-time window, e.g. `22:00-06:00`, in which any person is an intruder. |
+| `CAMSENTRY_BRIDGE_URL` | unset | Base URL of a [wyze-bridge](https://github.com/IDisposable/docker-wyze-bridge), e.g. `http://192.168.1.50:5080`, for live frames. |
 
 <details>
 <summary><b>Event images vs. live view</b></summary>
@@ -202,9 +207,9 @@ All optional, all non-secret environment variables.
 Out of the box the server sees what the Wyze app's Events tab sees: a still image per motion event. Without
 Cam Plus, Wyze limits how often cameras record events.
 
-For a frame from *right now*, run a wyze-bridge on your network and set `WYZE_CAM_BRIDGE_URL`.
+For a frame from *right now*, run a wyze-bridge on your network and set `CAMSENTRY_BRIDGE_URL`.
 `analyze_camera` and `view_camera` then use a live snapshot when no `event_id` is given. If the bridge has
-`BRIDGE_AUTH` enabled, store its credentials in the keychain with `wyze-cam-mcp bridge-auth`.
+`BRIDGE_AUTH` enabled, store its credentials in the keychain with `camsentry-mcp bridge-auth`.
 
 </details>
 
@@ -225,14 +230,17 @@ The full threat model, including what a manipulated model can and cannot do, is 
 
 - Wyze has no official public API. This project uses the community
   [wyze-sdk](https://github.com/shauntarves/wyze-sdk), which can break when Wyze changes their service.
+- Wyze's [Terms of Service](https://www.wyze.com/policies/terms-of-service) restrict third-party
+  applications that interact with their service. Using this project with your account may breach those
+  terms, and Wyze could suspend the account. That risk is yours to weigh.
 - `watch_cameras` is a poll, not a push: the model (or your client's scheduler) has to call it.
 - `set_armed` and the "already reported" memory of `watch_cameras` reset when the server restarts.
 
 ## Development
 
 ```sh
-git clone https://github.com/14manj01/wyze-cam-mcp
-cd wyze-cam-mcp
+git clone https://github.com/14manj01/camsentry-mcp
+cd camsentry-mcp
 python -m venv .venv
 .venv/bin/pip install -e ".[dev]"      # Windows: .venv\Scripts\pip
 .venv/bin/pytest
@@ -241,5 +249,5 @@ python -m venv .venv
 ---
 
 <p align="center">
-  <sub>Not affiliated with or endorsed by Wyze Labs. Released under the <a href="LICENSE">MIT license</a>.</sub>
+  <sub>Not affiliated with, endorsed by or sponsored by Wyze Labs, Inc. Wyze is a trademark of Wyze Labs, Inc.<br>Released under the <a href="LICENSE">MIT license</a>.</sub>
 </p>
