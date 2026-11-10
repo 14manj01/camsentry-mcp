@@ -56,8 +56,11 @@ The server speaks MCP over stdio only. It opens no network port.
 
 ### Logging
 
-`wyze-sdk` logs entire device records, including camera P2P keys, at WARNING level when it meets a device
-model it does not recognise. This project raises that logger to ERROR.
+Two libraries would otherwise write secrets to the server's stderr, and both are silenced:
+
+- `httpx` logs every request URL at INFO level, and Wyze event image URLs are pre-signed.
+- `wyze-sdk` logs entire device records, including camera P2P keys, at WARNING level when it meets a
+  device model it does not recognise.
 
 ## Repository hygiene
 

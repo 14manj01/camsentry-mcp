@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from datetime import datetime, timedelta
 from typing import Any
 
@@ -13,6 +14,7 @@ from wyze_sdk.models.events import Event
 from conftest import JPEG
 from wyze_cam_mcp.credentials import SecretStore, Tokens
 from wyze_cam_mcp.images import ImageError
+from wyze_cam_mcp.server import quiet_library_logging
 from wyze_cam_mcp.wyze import NotLoggedIn, WyzeCloud, WyzeError
 
 EXPIRED = {"code": "2001", "msg": "AccessTokenError"}
@@ -230,3 +232,31 @@ def test_non_image_downloads_are_rejected(store: SecretStore, account: FakeAccou
     (event,) = wyze.events(since=NOW - timedelta(hours=1), until=NOW)
     with pytest.raises(ImageError, match="not a JPEG"):
         wyze.event_image(event)
+
+
+def test_sight_safe_image_host_only_serves_the_wyze_app_user_agent(store: SecretStore, account: FakeAccount) -> None:
+    # prod-sight-safe-auth.wyze.com answers 401 "Access token is invalid" to any other client.
+    def gateway(request: httpx.Request) -> httpx.Response:
+        if not request.headers["user-agent"].startswith("okhttp/"):
+            return httpx.Response(401, json={"error": "Access token is invalid."})
+        return httpx.Response(200, content=JPEG)
+
+    store.save_tokens(Tokens("access-1", "refresh-1"))
+    account.events = [raw_event("e1", NOW - timedelta(minutes=1))]
+    wyze = cloud(store, account, handler=gateway)
+    (event,) = wyze.events(since=NOW - timedelta(hours=1), until=NOW)
+
+    assert wyze.event_image(event) == (JPEG, "image/jpeg")
+
+
+def test_presigned_image_urls_are_not_written_to_the_log(store: SecretStore, account: FakeAccount, caplog: pytest.LogCaptureFixture) -> None:
+    store.save_tokens(Tokens("access-1", "refresh-1"))
+    account.events = [raw_event("e1", NOW - timedelta(minutes=1), file_list=[{"file_id": "f", "type": 1, "url": "https://img.example/e1.jpg?st=SIGNED"}])]
+    wyze = cloud(store, account)
+    (event,) = wyze.events(since=NOW - timedelta(hours=1), until=NOW)
+
+    quiet_library_logging()
+    with caplog.at_level(logging.INFO):  # the MCP SDK turns on INFO logging for the whole process
+        wyze.event_image(event)
+
+    assert "SIGNED" not in caplog.text

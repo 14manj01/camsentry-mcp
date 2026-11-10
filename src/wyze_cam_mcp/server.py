@@ -131,8 +131,12 @@ def create_watch(env: Mapping[str, str]) -> CameraWatch:
     )
 
 
-def quiet_sdk_logging() -> None:
-    """wyze-sdk logs whole device records (including camera P2P keys) at WARNING for models it does not know."""
+def quiet_library_logging() -> None:
+    """Keep secrets out of stderr. The MCP SDK enables INFO logging for the whole process, at which
+    httpx logs every request URL (Wyze image URLs are pre-signed), and wyze-sdk logs whole device
+    records, camera P2P keys included, at WARNING for models it does not know."""
+    logging.getLogger("httpx").setLevel(logging.WARNING)
+    logging.getLogger("httpcore").setLevel(logging.WARNING)
     logging.getLogger("wyze_sdk").setLevel(logging.ERROR)
 
 

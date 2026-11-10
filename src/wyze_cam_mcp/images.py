@@ -21,11 +21,17 @@ def image_mime(data: bytes) -> str:
     raise ImageError("The camera returned data that is not a JPEG, PNG or WebP image.")
 
 
-def download_image(http: httpx.Client, url: str, *, auth: tuple[str, str] | None = None) -> tuple[bytes, str]:
+def download_image(
+    http: httpx.Client,
+    url: str,
+    *,
+    auth: tuple[str, str] | None = None,
+    headers: dict[str, str] | None = None,
+) -> tuple[bytes, str]:
     """Return (bytes, mime type) for the image at `url`."""
     buffer = bytearray()
     try:
-        with http.stream("GET", url, auth=auth) as response:
+        with http.stream("GET", url, auth=auth, headers=headers) as response:
             if response.status_code != 200:
                 raise ImageError(f"The image request returned HTTP {response.status_code}.")
             for chunk in response.iter_bytes():

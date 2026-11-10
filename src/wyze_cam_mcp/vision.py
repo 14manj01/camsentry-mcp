@@ -14,7 +14,9 @@ from typing import Any
 
 import httpx
 
-_TIMEOUT_SECONDS = 300.0  # first call may have to load the model into memory
+# Covers loading a small model into memory (about 15-35 s for gemma3:4b). A model that needs longer
+# than this per frame is too slow to watch cameras with, and MCP clients give up on the tool anyway.
+_TIMEOUT_SECONDS = 90.0
 _MAX_SUMMARY = 300
 _MAX_PETS = 10
 
@@ -136,7 +138,10 @@ class VisionDetector:
         try:
             response = self._http.post(f"{self._base_url}/chat/completions", json=payload, timeout=_TIMEOUT_SECONDS)
         except httpx.TimeoutException:
-            raise VisionError(f"The vision model '{self._model}' did not answer within 5 minutes.") from None
+            raise VisionError(
+                f"The vision model '{self._model}' did not answer within {_TIMEOUT_SECONDS:.0f} seconds. "
+                "Use a smaller vision model (WYZE_CAM_VISION_MODEL)."
+            ) from None
         except httpx.HTTPError:
             raise VisionError(
                 f"Could not reach the local vision model server at {self._base_url}. Is it running?"

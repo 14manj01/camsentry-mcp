@@ -22,6 +22,9 @@ from .credentials import SecretStore, Tokens
 from .images import ImageError, download_image
 
 _PAGE = 20  # Wyze caps event queries at 20 per request.
+# Wyze's image gateway (prod-sight-safe-auth.wyze.com) authorises by the signed URL alone, but answers
+# 401 "Access token is invalid" unless the request looks like the Android app's HTTP client.
+_IMAGE_HEADERS = {"User-Agent": "okhttp/4.9.3"}
 _NOT_LOGGED_IN = "Not connected to Wyze. Run `wyze-cam-mcp login` in a terminal."
 _SESSION_EXPIRED = "The Wyze session expired. Run `wyze-cam-mcp login` in a terminal."
 
@@ -211,4 +214,4 @@ class WyzeCloud:
     def event_image(self, event: CameraEvent) -> tuple[bytes, str]:
         if event.image_url is None:
             raise ImageError("That event has no image.")
-        return download_image(self._http, event.image_url)
+        return download_image(self._http, event.image_url, headers=_IMAGE_HEADERS)

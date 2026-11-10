@@ -15,7 +15,7 @@ from wyze_sdk.errors import WyzeApiError, WyzeClientError
 from . import __version__
 from .config import ConfigError, Settings
 from .credentials import BridgeAuth, CredentialStoreError, SecretStore, Tokens
-from .server import quiet_sdk_logging, serve
+from .server import quiet_library_logging, serve
 from .wyze import NotLoggedIn, WyzeCloud, WyzeError
 
 _API_KEY_URL = "https://developer-api-console.wyze.com/#/apikey/view"
@@ -134,7 +134,7 @@ def main(argv: list[str] | None = None) -> int:
     bridge.add_argument("--clear", action="store_true", help="delete the stored bridge credentials")
     args = parser.parse_args(argv)
 
-    quiet_sdk_logging()
+    quiet_library_logging()
     try:
         if args.command in (None, "serve"):
             serve(os.environ)
