@@ -1,12 +1,50 @@
-# wyze-cam-mcp
+<p align="center">
+  <img src="docs/banner.svg" alt="wyze-cam-mcp: let a local model watch your Wyze cameras for people, pets, packages and intruders" width="100%">
+</p>
 
-An [MCP](https://modelcontextprotocol.io) server that lets a **local model** watch your Wyze cameras and
-report **people, pets, packages and intruders**.
+<p align="center">
+  <a href="https://github.com/14manj01/wyze-cam-mcp/actions/workflows/ci.yml"><img src="https://github.com/14manj01/wyze-cam-mcp/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue" alt="MIT license"></a>
+  <img src="https://img.shields.io/badge/python-3.12%20%E2%80%93%203.14-3776AB?logo=python&logoColor=white" alt="Python 3.12 to 3.14">
+  <a href="https://modelcontextprotocol.io"><img src="https://img.shields.io/badge/MCP-stdio%20server-111827" alt="MCP stdio server"></a>
+  <img src="https://img.shields.io/badge/vision-100%25%20local-22c55e" alt="Vision runs locally">
+  <a href="SECURITY.md"><img src="https://img.shields.io/badge/secrets-OS%20keychain%20only-8b5cf6" alt="Secrets in the OS keychain only"></a>
+</p>
 
-- Detection runs on your machine, through any OpenAI-compatible local vision model (Ollama, LM Studio, llama.cpp).
-- Your Wyze password and API key are typed once into a terminal prompt and never stored. The resulting
-  session tokens live in your operating system keychain, not in files, environment variables or MCP configs.
-- The server is read-only: it has no tool that can switch a camera off, unlock anything or change a Wyze setting.
+<p align="center">
+  <a href="#quick-start">Quick start</a> ·
+  <a href="#tools">Tools</a> ·
+  <a href="#how-alerts-are-decided">Alerts</a> ·
+  <a href="#settings">Settings</a> ·
+  <a href="#security">Security</a> ·
+  <a href="#limitations">Limitations</a>
+</p>
+
+---
+
+**wyze-cam-mcp** is an [MCP](https://modelcontextprotocol.io) server that gives a local model eyes on your
+Wyze cameras. Ask it *"is there a package at the front door?"* or *"arm the cameras and tell me if anyone
+shows up"*, and it answers from what your cameras actually recorded.
+
+<table>
+  <tr>
+    <td align="center" width="25%">🧍<br><b>People</b><br><sub>Who is at the door, and how many</sub></td>
+    <td align="center" width="25%">🐾<br><b>Pets</b><br><sub>Dogs, cats and other animals</sub></td>
+    <td align="center" width="25%">📦<br><b>Packages</b><br><sub>Parcels left unattended</sub></td>
+    <td align="center" width="25%">🚨<br><b>Intruders</b><br><sub>Anyone while armed, or acting suspiciously</sub></td>
+  </tr>
+</table>
+
+## Why this one
+
+| | |
+| --- | --- |
+| 🖥️ **Local vision** | Frames are analysed on your machine by a small vision model (default `gemma3:4b`, 3.3 GB) through Ollama, LM Studio or llama.cpp. A non-local endpoint is refused unless you opt in. |
+| 🔐 **No stored passwords** | Your Wyze password and API key are typed once into a terminal prompt and discarded. Only session tokens are kept, in your operating system keychain. Never in files, environment variables or MCP configs. |
+| 👀 **Read-only** | There is no tool that can switch a camera off, unlock anything or change a Wyze setting. |
+| 💬 **Works with text-only models** | Detection results come back as plain JSON, so the chat model driving the tools does not need vision. |
+
+## How it works
 
 ```mermaid
 flowchart LR
@@ -16,23 +54,29 @@ flowchart LR
     S -. optional live frame .-> B[wyze-bridge on your LAN]
 ```
 
-## Requirements
+## Quick start
 
-- Python 3.12 – 3.14
-- A Wyze account and a free Wyze API key: <https://developer-api-console.wyze.com/#/apikey/view>
-- A small local vision model. The default is `gemma3:4b` (3.3 GB) on [Ollama](https://ollama.com):
-  `ollama pull gemma3:4b`. It analyses a frame in about a second on a GPU that fits it.
-- An OS keychain: Windows Credential Manager, macOS Keychain, or a Secret Service provider
-  (GNOME Keyring, KWallet) on Linux
+**You need:** Python 3.12 – 3.14, a Wyze account, [Ollama](https://ollama.com) (or another local model server),
+and an OS keychain (Windows Credential Manager, macOS Keychain, or GNOME Keyring / KWallet on Linux).
 
-## Install
+**1. Install**
 
 ```sh
 pipx install git+https://github.com/14manj01/wyze-cam-mcp
 # or: uv tool install git+https://github.com/14manj01/wyze-cam-mcp
 ```
 
-## Connect your Wyze account
+**2. Get a small vision model**
+
+```sh
+ollama pull gemma3:4b
+```
+
+It analyses a frame in about a second on a GPU that fits it.
+
+**3. Connect your Wyze account**
+
+Create a free API key at <https://developer-api-console.wyze.com/#/apikey/view>, then:
 
 ```sh
 wyze-cam-mcp login
@@ -40,15 +84,14 @@ wyze-cam-mcp login
 
 You are asked for your Wyze email, password, API Key ID and API Key (and a 2FA code if your account uses
 one). They are exchanged for session tokens, the tokens are saved to the OS keychain, and the password and
-API key are discarded. Then check everything:
+API key are discarded.
 
 ```sh
-wyze-cam-mcp status
+wyze-cam-mcp status    # checks the Wyze session, the vision model and your settings
+wyze-cam-mcp logout    # revokes the session with Wyze and deletes the tokens
 ```
 
-`wyze-cam-mcp logout` revokes the session with Wyze and deletes the tokens.
-
-## Add it to your MCP client
+**4. Add it to your MCP client**
 
 Any MCP client that launches stdio servers works (LM Studio, Jan, Open WebUI via mcpo, ollmcp, …).
 There are no secrets in this block, so it is safe to share or commit:
@@ -67,8 +110,13 @@ There are no secrets in this block, so it is safe to share or commit:
 }
 ```
 
-Then ask your model things like *"Check my cameras"*, *"Is there a package at the front door?"* or
-*"Arm the cameras and tell me if anyone shows up."*
+**5. Ask**
+
+> Check my cameras.
+>
+> Is there a package at the front door?
+>
+> Arm the cameras and tell me if anyone shows up.
 
 ## Tools
 
@@ -81,7 +129,8 @@ Then ask your model things like *"Check my cameras"*, *"Is there a package at th
 | `view_camera` | Return the frame itself, for chat models that accept images. |
 | `set_armed` | `on` / `off` / `schedule`: when a detected person counts as an intruder. |
 
-The chat model does not need vision: `watch_cameras` and `analyze_camera` return plain JSON, for example
+<details>
+<summary><b>Example result from <code>analyze_camera</code></b></summary>
 
 ```json
 {
@@ -99,17 +148,27 @@ The chat model does not need vision: `watch_cameras` and `analyze_camera` return
 }
 ```
 
-### How alerts are decided
+</details>
 
-- **person / pet / package**: the local vision model sees one, or Wyze tagged the event (Wyze tags need Cam Plus).
-- **intruder**: a person is detected while the system is armed (`WYZE_CAM_ARMED_HOURS`, or `set_armed on`),
-  or the vision model flags clearly suspicious behaviour such as testing a door or taking a package.
+## How alerts are decided
 
-Detection quality is that of the vision model you choose. With the default `gemma3:4b`, "is there a
-person / pet / package" is dependable but head counts in busy scenes are approximate. Larger models are
-not required and can be too slow: if the model does not fit in GPU memory a frame can take minutes, longer
-than most MCP clients wait for a tool. Treat alerts as a prompt to look, not as proof, and do not rely on
-this project as your only security system.
+| Alert | Raised when |
+| --- | --- |
+| 🧍 `person` | The local vision model sees a person, or Wyze tagged the event. |
+| 🐾 `pet` | The local vision model sees an animal, or Wyze tagged the event. |
+| 📦 `package` | The local vision model sees an unattended parcel, or Wyze tagged the event. |
+| 🚨 `intruder` | A person is detected while the system is armed (`WYZE_CAM_ARMED_HOURS`, or `set_armed on`), **or** the vision model flags clearly suspicious behaviour such as testing a door or taking a package. |
+
+Wyze's own tags need Cam Plus; the local model does not.
+
+> [!NOTE]
+> Detection quality is that of the vision model you choose. With the default `gemma3:4b`, "is there a
+> person / pet / package" is dependable but head counts in busy scenes are approximate. Larger models are
+> not required and can be too slow: if the model does not fit in GPU memory a frame can take minutes, longer
+> than most MCP clients wait for a tool.
+
+> [!WARNING]
+> Treat alerts as a prompt to look, not as proof. Do not rely on this project as your only security system.
 
 ## Settings
 
@@ -123,7 +182,10 @@ All optional, all non-secret environment variables.
 | `WYZE_CAM_ARMED_HOURS` | unset | Daily local-time window, e.g. `22:00-06:00`, in which any person is an intruder. |
 | `WYZE_CAM_BRIDGE_URL` | unset | Base URL of a [wyze-bridge](https://github.com/IDisposable/docker-wyze-bridge), e.g. `http://192.168.1.50:5080`, for live frames. |
 
-### Event images vs. live view
+<details>
+<summary><b>Event images vs. live view</b></summary>
+
+<br>
 
 Out of the box the server sees what the Wyze app's Events tab sees: a still image per motion event. Without
 Cam Plus, Wyze limits how often cameras record events.
@@ -132,16 +194,20 @@ For a frame from *right now*, run a wyze-bridge on your network and set `WYZE_CA
 `analyze_camera` and `view_camera` then use a live snapshot when no `event_id` is given. If the bridge has
 `BRIDGE_AUTH` enabled, store its credentials in the keychain with `wyze-cam-mcp bridge-auth`.
 
+</details>
+
 ## Security
 
-See [SECURITY.md](SECURITY.md) for the full model. In short:
+> [!IMPORTANT]
+> No secret is ever written to a file by this project, so there is nothing to accidentally commit.
+> Plaintext and missing keychains are refused rather than silently used.
 
-- No secret is ever written to a file by this project, so there is nothing to accidentally commit.
-  Plaintext and missing keychains are refused rather than silently used.
-- Camera frames go to the vision endpoint only. It must be a loopback address unless you opt in.
-- Tools take camera names and event ids, never URLs or file paths.
-- Error messages and logs are scrubbed of tokens, pre-signed image URLs and raw Wyze responses.
-- This repository runs secret scanning (gitleaks) on every push and pull request.
+- 🖼️ Camera frames go to the vision endpoint only. It must be a loopback address unless you opt in.
+- 🧱 Tools take camera names and event ids, never URLs or file paths.
+- 🧹 Error messages and logs are scrubbed of tokens, pre-signed image URLs and raw Wyze responses.
+- 🔎 This repository runs secret scanning (gitleaks) on every push and pull request.
+
+The full threat model, including what a manipulated model can and cannot do, is in [SECURITY.md](SECURITY.md).
 
 ## Limitations
 
@@ -160,4 +226,8 @@ python -m venv .venv
 .venv/bin/pytest
 ```
 
-Not affiliated with or endorsed by Wyze Labs. MIT licensed.
+---
+
+<p align="center">
+  <sub>Not affiliated with or endorsed by Wyze Labs. Released under the <a href="LICENSE">MIT license</a>.</sub>
+</p>
