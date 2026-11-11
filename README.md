@@ -26,7 +26,7 @@
 
 **camsentry-mcp** is an unofficial [MCP](https://modelcontextprotocol.io) server that gives a local model
 eyes on Wyze cameras. A small vision model on your own machine looks at every still your cameras record,
-remembers what it saw, and sends a message to your phone when something matters:
+remembers what it saw, and tells you when something matters, by push notification, email or text:
 
 > **Person seen at Front Door:** A courier in a blue uniform places a box on the step. (10:42 AM)
 >
@@ -77,7 +77,7 @@ ollmcp, …). There is nothing secret in it and nothing to configure:
 
 </details>
 
-That is all. While the chat app runs, the cameras are watched and alerts reach your phone. To keep watching
+That is all. While the chat app runs, the cameras are watched and alerts reach you. To keep watching
 when it is closed, run `camsentry-mcp autostart on`: the watcher then starts in the background each time
 you log in (`autostart off` undoes it). `camsentry-mcp watch` runs it in a terminal instead.
 
@@ -108,7 +108,7 @@ flowchart LR
         S <--> D[(Memory: what each still showed)]
     end
     S -- session tokens from OS keychain --> W[Wyze cloud: events + stills]
-    S -- alert text --> N[ntfy / SMS / webhook] --> P[Your phone]
+    S -- alert text --> N[ntfy / email / text / webhook] --> P[Your phone]
 ```
 
 ## Tools
@@ -156,7 +156,7 @@ phone is told, so alerts cannot be quietly switched off.
 
 ## Alerts
 
-| Alert | Raised when | Sent to phone by default |
+| Alert | Raised when | Sent to you by default |
 | --- | --- | --- |
 | 🚨 `intruder` | A person while armed, or behaviour the model flags as suspicious (testing a door, taking a package). | yes, urgent |
 | 📦 `package_taken` | A package that was in view is gone after a person was there. | yes, urgent |
