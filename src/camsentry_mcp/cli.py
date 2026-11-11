@@ -284,8 +284,10 @@ def _status(secret_store: SecretStore, settings: Settings) -> int:
 
 
 def _mcp_config() -> str:
-    command = shutil.which("camsentry-mcp") or "camsentry-mcp"
-    return json.dumps({"mcpServers": {"camsentry": {"command": command}}}, indent=2)
+    """Config that starts this installation, also when its scripts folder is not on PATH (a virtualenv)."""
+    on_path = shutil.which("camsentry-mcp")
+    server = {"command": on_path} if on_path else {"command": sys.executable, "args": ["-m", "camsentry_mcp"]}
+    return json.dumps({"mcpServers": {"camsentry": server}}, indent=2)
 
 
 def _setup(secret_store: SecretStore, settings: Settings) -> int:
@@ -424,6 +426,9 @@ def main(argv: list[str] | None = None) -> int:
     except (ConfigError, CredentialStoreError) as err:
         print(f"camsentry-mcp: {err}", file=sys.stderr)
         return 2
+    except (EOFError, KeyboardInterrupt):
+        print("\nCancelled.", file=sys.stderr)
+        return 130
 
 
 if __name__ == "__main__":
