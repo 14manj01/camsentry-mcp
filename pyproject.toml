@@ -4,8 +4,8 @@ build-backend = "hatchling.build"
 
 [project]
 name = "camsentry-mcp"
-version = "0.1.0"
-description = "Unofficial read-only MCP server that lets a local model watch Wyze cameras and detect people, pets, packages and intruders."
+version = "0.2.0"
+description = "Unofficial read-only MCP server that lets a local model watch Wyze cameras, remember what they saw and text you when something matters."
 readme = "README.md"
 license = "MIT"
 license-files = ["LICENSE"]

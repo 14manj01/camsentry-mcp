@@ -1,7 +1,9 @@
 """Secret storage in the operating system keychain.
 
 Nothing in this module reads or writes files. The Wyze password and API key are
-never stored anywhere: only the session tokens they are exchanged for.
+never stored anywhere: only the session tokens they are exchanged for. Notification
+destinations (phone number, push topic, webhook URL) are kept here too, so that
+personal contact details never sit in a config file.
 """
 
 from __future__ import annotations
@@ -14,7 +16,7 @@ from keyring.backend import KeyringBackend
 
 SERVICE = "camsentry-mcp"
 _TOKENS = "wyze-tokens"
-_BRIDGE = "bridge-auth"
+_NOTIFY = "notify"
 # Windows Credential Manager rejects secrets longer than 1280 UTF-16 code units.
 _CHUNK = 1000
 
@@ -27,12 +29,6 @@ class CredentialStoreError(RuntimeError):
 class Tokens:
     access_token: str = field(repr=False)
     refresh_token: str = field(repr=False)
-
-
-@dataclass(frozen=True)
-class BridgeAuth:
-    username: str
-    password: str = field(repr=False)
 
 
 def _require_secure(backend: KeyringBackend) -> None:
@@ -92,19 +88,19 @@ class SecretStore:
             self._delete(f"{name}.{index}")
         self._delete(f"{name}.n")
 
-    def _read_json(self, name: str) -> dict[str, str] | None:
+    def _read_json(self, name: str) -> dict[str, str]:
         raw = self._read(name)
         if raw is None:
-            return None
+            return {}
         try:
             data = json.loads(raw)
         except ValueError:
-            return None
-        return data if isinstance(data, dict) else None
+            return {}
+        return data if isinstance(data, dict) else {}
 
     def load_tokens(self) -> Tokens | None:
         data = self._read_json(_TOKENS)
-        if not data or not data.get("access_token") or not data.get("refresh_token"):
+        if not data.get("access_token") or not data.get("refresh_token"):
             return None
         return Tokens(data["access_token"], data["refresh_token"])
 
@@ -114,14 +110,12 @@ class SecretStore:
     def clear_tokens(self) -> None:
         self._erase(_TOKENS)
 
-    def load_bridge_auth(self) -> BridgeAuth | None:
-        data = self._read_json(_BRIDGE)
-        if not data or "username" not in data or "password" not in data:
-            return None
-        return BridgeAuth(data["username"], data["password"])
+    def load_notify(self) -> dict[str, str]:
+        """Notification destinations, keyed as in notify.py (sms_phone, sms_key, ntfy_topic, webhook_url)."""
+        return self._read_json(_NOTIFY)
 
-    def save_bridge_auth(self, auth: BridgeAuth) -> None:
-        self._write(_BRIDGE, json.dumps({"username": auth.username, "password": auth.password}))
-
-    def clear_bridge_auth(self) -> None:
-        self._erase(_BRIDGE)
+    def save_notify(self, destinations: dict[str, str]) -> None:
+        if destinations:
+            self._write(_NOTIFY, json.dumps(destinations))
+        else:
+            self._erase(_NOTIFY)
