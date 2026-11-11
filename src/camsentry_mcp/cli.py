@@ -18,7 +18,16 @@ from wyze_sdk.errors import WyzeApiError, WyzeClientError
 from . import __version__, autostart
 from .config import ConfigError, Settings
 from .credentials import CredentialStoreError, SecretStore, Tokens
-from .notify import FREE_SMS_KEY, Message, Notifier, NotifyError, new_ntfy_topic, normalize_phone
+from .notify import (
+    FREE_SMS_KEY,
+    Message,
+    Notifier,
+    NotifyError,
+    new_ntfy_topic,
+    normalize_phone,
+    smtp_host_for,
+    valid_email,
+)
 from .server import create_watch, quiet_library_logging, serve
 from .store import Store
 from .vision import RECOMMENDED_MODEL, VisionDetector, VisionError
@@ -49,9 +58,10 @@ def _notifier(secret_store: SecretStore, settings: Settings, http: httpx.Client)
 # -- Wyze account ----------------------------------------------------------
 
 
-def _login(secret_store: SecretStore) -> int:
+def _login(secret_store: SecretStore) -> tuple[int, str]:
+    """Sign in to Wyze. Returns the exit code and the email that was typed, which setup offers again for alerts."""
     if not _require_terminal():
-        return 2
+        return 2, ""
     print(f"You need a Wyze API key. Create one at {_API_KEY_URL}")
     print("Your password and API key are used once to sign in and are not saved anywhere.\n")
     email = input("Wyze email: ").strip()
@@ -65,18 +75,18 @@ def _login(secret_store: SecretStore) -> int:
     except WyzeApiError as err:
         # Only the SDK's own first line: the rest of the message is the raw server response.
         print(f"Login failed: {str(err).splitlines()[0]}", file=sys.stderr)
-        return 1
+        return 1, ""
     except (WyzeClientError, requests.RequestException, KeyError, TypeError) as err:
         print(f"Login failed ({type(err).__name__}).", file=sys.stderr)
-        return 1
+        return 1, ""
     secret_store.save_tokens(tokens)
     print(f"\nSigned in. Session tokens saved to {secret_store.backend_name}.")
     try:
         print(f"Found {_camera_summary(secret_store)}")
     except (WyzeError, NotLoggedIn) as err:
         print(f"Signed in, but listing cameras failed: {err}", file=sys.stderr)
-        return 1
-    return 0
+        return 1, ""
+    return 0, email
 
 
 def _logout(secret_store: SecretStore) -> int:
@@ -114,6 +124,30 @@ def _notify_sms(secret_store: SecretStore) -> int:
         return 1
     key = getpass("Textbelt key (hidden; press Enter to try the free key, outside the US only): ").strip() or FREE_SMS_KEY
     _save_destination(secret_store, sms_phone=phone, sms_key=key)
+    print(f"Saved to {secret_store.backend_name}. Send a test with `camsentry-mcp notify test`.")
+    return 0
+
+
+def _notify_email(secret_store: SecretStore, suggested: str = "") -> int:
+    if not _require_terminal():
+        return 2
+    print("Alerts are emailed from your own mailbox, to yourself unless you say otherwise.")
+    print("The mailbox needs an app password, which is not your normal mail password:")
+    print("  Gmail:  https://myaccount.google.com/apppasswords (2-Step Verification has to be on)")
+    print("  Others: look for 'app password' in the security settings of your mail account.\n")
+    address = input(f"Your email address{f' [{suggested}]' if suggested else ''}: ").strip() or suggested
+    if not valid_email(address):
+        print("That is not an email address.", file=sys.stderr)
+        return 1
+    host = smtp_host_for(address) or input("Outgoing mail (SMTP) server of that mailbox, e.g. smtp.example.com: ").strip()
+    password = getpass("App password (hidden): ")
+    if host == "smtp.gmail.com":
+        password = password.replace(" ", "")  # Google displays app passwords in four spaced groups
+    recipient = input("Send alerts to (press Enter for the same address): ").strip() or address
+    if not host or not password or not valid_email(recipient):
+        print("A mail server, an app password and a valid recipient are all needed.", file=sys.stderr)
+        return 1
+    _save_destination(secret_store, email_address=address, email_password=password, email_host=host, email_to=recipient)
     print(f"Saved to {secret_store.backend_name}. Send a test with `camsentry-mcp notify test`.")
     return 0
 
@@ -217,8 +251,10 @@ def _setup(secret_store: SecretStore, settings: Settings) -> int:
         return 2
     print("camsentry-mcp setup\n")
     print("Step 1 of 3: Wyze account")
+    wyze_email = ""
     if secret_store.load_tokens() is None:
-        if _login(secret_store) != 0:
+        code, wyze_email = _login(secret_store)
+        if code != 0:
             return 1
     else:
         print("Already signed in.")
@@ -231,16 +267,19 @@ def _setup(secret_store: SecretStore, settings: Settings) -> int:
         return 1
 
     print("\nStep 3 of 3: how should camera alerts reach you?")
-    print("  1. Free notifications in the ntfy phone app")
-    print("  2. Text message (SMS)")
-    print("  3. Not now")
-    choice = input("Choose 1, 2 or 3: ").strip()
+    print("  1. Free notifications in the ntfy phone app (no account)")
+    print("  2. Email from your own mailbox (needs an app password)")
+    print("  3. Text message (SMS, a few cents per text)")
+    print("  4. Not now")
+    choice = input("Choose 1, 2, 3 or 4: ").strip()
     if choice == "1":
         _notify_ntfy(secret_store, settings)
         input("Press Enter once you have subscribed in the app, and a test will be sent...")
-    elif choice == "2" and _notify_sms(secret_store) != 0:
+    elif choice == "2" and _notify_email(secret_store, wyze_email) != 0:
         return 1
-    if choice in ("1", "2"):
+    elif choice == "3" and _notify_sms(secret_store) != 0:
+        return 1
+    if choice in ("1", "2", "3"):
         _notify_test(secret_store, settings)
 
     print("\nDone. Add this to your chat app's MCP servers and your model can use the cameras:\n")
@@ -298,7 +337,7 @@ def main(argv: list[str] | None = None) -> int:
     commands.add_parser("login", help="sign in to Wyze and store session tokens in the OS keychain")
     commands.add_parser("logout", help="revoke the Wyze session and delete the stored tokens")
     notify = commands.add_parser("notify", help="choose where alerts are sent")
-    notify.add_argument("action", choices=["sms", "ntfy", "webhook", "test", "off"])
+    notify.add_argument("action", choices=["ntfy", "email", "sms", "webhook", "test", "off"])
     commands.add_parser("forget", help="delete the remembered history of what the cameras saw")
     start = commands.add_parser("autostart", help="start the watcher each time you log in")
     start.add_argument("action", choices=["on", "off"])
@@ -320,11 +359,12 @@ def main(argv: list[str] | None = None) -> int:
         if args.command == "setup":
             return _setup(secret_store, settings)
         if args.command == "login":
-            return _login(secret_store)
+            return _login(secret_store)[0]
         if args.command == "logout":
             return _logout(secret_store)
         if args.command == "notify":
             actions = {
+                "email": lambda: _notify_email(secret_store),
                 "sms": lambda: _notify_sms(secret_store),
                 "ntfy": lambda: _notify_ntfy(secret_store, settings),
                 "webhook": lambda: _notify_webhook(secret_store),

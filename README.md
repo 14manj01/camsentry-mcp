@@ -181,10 +181,16 @@ Chosen in `camsentry-mcp setup`, changed with `camsentry-mcp notify …`. Destin
 | Channel | Command | Cost | What leaves your machine |
 | --- | --- | --- | --- |
 | **ntfy** push (recommended) | `notify ntfy` | free, no account | Alert text, to ntfy.sh or your own ntfy server. You install the ntfy app and subscribe to a private topic. |
+| **Email** | `notify email` | free | Alert text, through your own mailbox to yourself. Needs an app password for that mailbox (Gmail, Outlook, Yahoo and iCloud servers are known; others ask for the server name). |
 | **SMS** | `notify sms` | a few cents per text | Alert text and your number, to textbelt.com. You buy a key there; its free key does not send to US numbers. Some antivirus products block that site. |
 | **Webhook** | `notify webhook` | free | Alert as JSON (`title`, `body`, `urgent`) to a URL of yours: Home Assistant, Discord, Slack. |
 
 `camsentry-mcp notify test` sends a test; `camsentry-mcp notify off` removes every destination.
+
+An email address alone is not enough to be notified: something has to send the mail, and the free services
+that used to send to any address (ntfy.sh's email, Textbelt's free texts) have closed that door because of
+abuse. So email goes out through a mailbox you already own. If your mobile carrier still offers an
+email-to-text address for your number, giving that as the recipient turns each alert into a text message.
 Images are never sent anywhere.
 
 ## Settings
@@ -202,7 +208,7 @@ Nothing has to be set. These environment variables exist for when you want somet
 | `CAMSENTRY_NTFY_SERVER` | `https://ntfy.sh` | Your own ntfy server. |
 | `CAMSENTRY_DATA_DIR` | per-user data folder | Where the memory database lives. |
 
-Commands: `setup`, `status`, `watch`, `autostart on|off`, `notify sms|ntfy|webhook|test|off`, `login`,
+Commands: `setup`, `status`, `watch`, `autostart on|off`, `notify ntfy|email|sms|webhook|test|off`, `login`,
 `logout`, `forget` (deletes the remembered history), and no command at all to run the MCP server.
 
 Watching uses your GPU each time a camera records something. If you also run a large chat model on the
@@ -214,8 +220,8 @@ same GPU, the two take turns and both get slower.
 > No secret is ever written to a file by this project, so there is nothing to accidentally commit.
 > Plaintext and missing keychains are refused rather than silently used.
 
-- 🔐 Your Wyze password and API key are typed once and discarded. Session tokens, your phone number and push
-  topic live in the OS keychain.
+- 🔐 Your Wyze password and API key are typed once and discarded. Session tokens, your phone number, push
+  topic and mailbox app password live in the OS keychain.
 - 🖼️ Camera images go to the vision endpoint only. It must be on this machine unless you opt in.
 - 👀 Read-only towards Wyze: no tool can switch a camera off, unlock anything or change a Wyze setting.
 - 🧱 Tools take camera names and event ids, never URLs or file paths. A model can text only you.

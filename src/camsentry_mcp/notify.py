@@ -1,8 +1,8 @@
-"""Tells the user what is going on: a text message, a phone push, or a webhook call.
+"""Tells the user what is going on: an email, a phone push, a text message, or a webhook call.
 
-Every channel is one HTTPS request, so nothing extra has to be installed. Destinations
-(phone number, push topic, webhook URL) come from the OS keychain and never appear in
-error messages or logs.
+Nothing extra has to be installed: push, text and webhook are one HTTPS request each, and email
+goes out through the user's own mailbox with Python's standard library. Destinations and the
+mailbox password come from the OS keychain and never appear in error messages or logs.
 """
 
 from __future__ import annotations
@@ -10,8 +10,12 @@ from __future__ import annotations
 import logging
 import re
 import secrets
+import smtplib
+import ssl
+from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime
+from email.message import EmailMessage
 from typing import Any
 
 import httpx
@@ -27,6 +31,19 @@ SMS_ENDPOINT = "https://textbelt.com/text"
 # allows free texts; the United States is not one of them, so US numbers need a paid key.
 FREE_SMS_KEY = "textbelt"
 MAX_TEXT = 300
+
+# Outgoing mail servers of the big mailbox providers, by address domain. All use STARTTLS on 587.
+_SMTP_HOSTS = {
+    "gmail.com": "smtp.gmail.com",
+    "googlemail.com": "smtp.gmail.com",
+    "outlook.com": "smtp-mail.outlook.com",
+    "hotmail.com": "smtp-mail.outlook.com",
+    "live.com": "smtp-mail.outlook.com",
+    "yahoo.com": "smtp.mail.yahoo.com",
+    "icloud.com": "smtp.mail.me.com",
+    "me.com": "smtp.mail.me.com",
+}
+SMTP_PORT = 587
 
 _TITLES = {
     "intruder": "Possible intruder",
@@ -92,17 +109,34 @@ def new_ntfy_topic() -> str:
     return "camsentry-" + secrets.token_urlsafe(18)
 
 
+def smtp_host_for(address: str) -> str | None:
+    """The outgoing mail server for a mailbox at one of the big providers, else None."""
+    return _SMTP_HOSTS.get(address.rpartition("@")[2].lower())
+
+
+def valid_email(address: str) -> bool:
+    return re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", address) is not None
+
+
 class Notifier:
-    def __init__(self, secret_store: SecretStore, http: httpx.Client, ntfy_server: str) -> None:
+    def __init__(
+        self,
+        secret_store: SecretStore,
+        http: httpx.Client,
+        ntfy_server: str,
+        smtp: Callable[..., Any] = smtplib.SMTP,
+    ) -> None:
         self._secrets = secret_store
         self._http = http
         self._ntfy_server = ntfy_server
+        self._smtp = smtp
         self._last_problem: str | None = None
 
     def channels(self) -> list[str]:
         """Names of the channels that have a destination configured."""
         saved = self._secrets.load_notify()
-        return [name for name, key in (("sms", "sms_phone"), ("ntfy", "ntfy_topic"), ("webhook", "webhook_url")) if saved.get(key)]
+        known = (("email", "email_address"), ("sms", "sms_phone"), ("ntfy", "ntfy_topic"), ("webhook", "webhook_url"))
+        return [name for name, key in known if saved.get(key)]
 
     def _post(self, channel: str, url: str, **kwargs: Any) -> httpx.Response:
         try:
@@ -141,13 +175,33 @@ class Notifier:
     def _webhook(self, saved: dict[str, str], message: Message) -> None:
         self._post("webhook", saved["webhook_url"], json={"title": message.title, "body": message.body, "urgent": message.urgent})
 
+    def _email(self, saved: dict[str, str], message: Message) -> None:
+        """Send through the user's own mailbox: it signs in as them and mails the alert."""
+        mail = EmailMessage()
+        mail["From"] = saved["email_address"]
+        mail["To"] = saved.get("email_to") or saved["email_address"]
+        mail["Subject"] = ("URGENT: " if message.urgent else "") + " ".join(message.title.split())
+        mail.set_content(message.body)
+        refused = NotifyError("email: the mail server refused the sign-in. Check the address and the app password.")
+        try:
+            with self._smtp(saved["email_host"], SMTP_PORT, timeout=20) as server:
+                server.starttls(context=ssl.create_default_context())
+                try:
+                    server.login(saved["email_address"], saved["email_password"])
+                except (smtplib.SMTPAuthenticationError, smtplib.SMTPServerDisconnected):
+                    # Seen with Gmail: for an account it does not know, it hangs up instead of answering.
+                    raise refused from None
+                server.send_message(mail)
+        except (smtplib.SMTPException, OSError) as err:
+            raise NotifyError(f"email: could not send ({type(err).__name__})") from None
+
     def send(self, message: Message) -> Delivery:
         """Deliver through every configured channel and report which worked and which did not.
 
         Raises NotifyError when nothing is configured or every channel failed.
         """
         saved = self._secrets.load_notify()
-        senders = {"sms": self._sms, "ntfy": self._ntfy, "webhook": self._webhook}
+        senders = {"email": self._email, "sms": self._sms, "ntfy": self._ntfy, "webhook": self._webhook}
         configured = self.channels()
         if not configured:
             raise NotifyError("No notification channel is set up. Run `camsentry-mcp setup` in a terminal.")

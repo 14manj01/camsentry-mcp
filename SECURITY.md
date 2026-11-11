@@ -15,6 +15,7 @@ numbers or camera images into an issue.
 | Wyze password, API Key ID, API Key, 2FA code | Typed into `camsentry-mcp setup` or `login`, sent to Wyze over TLS once, then discarded. Never stored, never accepted from environment variables, files or MCP tool arguments. |
 | Wyze access and refresh tokens | OS keychain only (Windows Credential Manager, macOS Keychain, Secret Service). Rotated tokens are written back to the keychain. |
 | Your phone number, SMS key, ntfy topic, webhook URL | OS keychain only. They are sent to the notification service you chose, and nowhere else. |
+| Your mailbox address and its app password (email alerts) | OS keychain only. The password is sent only to your mail provider's server, over an encrypted connection, to sign in. Use an app password, never your main mail password: it can be revoked on its own. |
 
 - The project never writes a secret to disk itself, so there is no `.env`, token cache or config file that
   could end up in a commit, a backup or a bug report. An MCP client config for this server contains no secrets.
@@ -50,7 +51,7 @@ numbers or camera images into an issue.
 | Data | Goes to | When |
 | --- | --- | --- |
 | Session tokens, requests for events and stills | Wyze | Always. |
-| Alert text: camera name, time, the model's one-sentence description | ntfy.sh (or your ntfy server), textbelt.com, or your webhook | Only for the channels you set up. |
+| Alert text: camera name, time, the model's one-sentence description | ntfy.sh (or your ntfy server), your mail provider, textbelt.com, or your webhook | Only for the channels you set up. |
 | Your phone number | textbelt.com | Only if you set up SMS. |
 | Camera images | Nowhere | Unless you opted in to a remote vision endpoint. |
 

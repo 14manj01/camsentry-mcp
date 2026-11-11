@@ -1,12 +1,23 @@
 from __future__ import annotations
 
+import smtplib
+
 import httpx
 import pytest
 
 from conftest import Outbox, at, seen
 from camsentry_mcp.config import ALERT_TYPES, DEFAULT_NOTIFY
 from camsentry_mcp.credentials import SecretStore
-from camsentry_mcp.notify import Message, Notifier, NotifyError, compose, new_ntfy_topic, normalize_phone
+from camsentry_mcp.notify import (
+    Message,
+    Notifier,
+    NotifyError,
+    compose,
+    new_ntfy_topic,
+    normalize_phone,
+    smtp_host_for,
+    valid_email,
+)
 
 PHONE = "+15550100123"
 
@@ -135,3 +146,103 @@ def test_unreachable_services_do_not_leak_the_push_topic_or_webhook(store: Secre
 def test_sending_with_nothing_set_up_says_how_to_fix_it(store: SecretStore) -> None:
     with pytest.raises(NotifyError, match="camsentry-mcp setup"):
         notifier(store, Outbox()).send(URGENT)
+
+
+# -- email through the user's own mailbox --------------------------------------
+
+MAILBOX = {"email_address": "me@gmail.com", "email_password": "app-pass-word", "email_host": "smtp.gmail.com", "email_to": "me@gmail.com"}
+
+
+class FakeMailServer:
+    """Stands in for smtplib.SMTP and records what a mail client did with it."""
+
+    def __init__(self, reject_login: bool = False, unreachable: bool = False) -> None:
+        self.reject_login, self.unreachable = reject_login, unreachable
+        self.connected_to: tuple[str, int] | None = None
+        self.encrypted = False
+        self.logins: list[tuple[str, str]] = []
+        self.sent: list = []
+
+    def __call__(self, host: str, port: int, timeout: float):
+        if self.unreachable:
+            raise OSError("network is unreachable")
+        self.connected_to = (host, port)
+        return self
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc) -> None:
+        return None
+
+    def starttls(self, context) -> None:
+        self.encrypted = True
+
+    def login(self, user: str, password: str) -> None:
+        if not self.encrypted:
+            raise AssertionError("password sent before the connection was encrypted")
+        if self.reject_login:
+            raise smtplib.SMTPAuthenticationError(535, b"Username and Password not accepted for app-pass-word")
+        self.logins.append((user, password))
+
+    def send_message(self, mail) -> None:
+        self.sent.append(mail)
+
+
+def mailer(store: SecretStore, server: FakeMailServer) -> Notifier:
+    return Notifier(store, httpx.Client(transport=httpx.MockTransport(Outbox())), "https://ntfy.example", smtp=server)
+
+
+def test_email_is_sent_from_the_users_mailbox_over_an_encrypted_connection(store: SecretStore) -> None:
+    server = FakeMailServer()
+    store.save_notify(MAILBOX)
+
+    assert mailer(store, server).send(URGENT).delivered == ["email"]
+
+    assert server.connected_to == ("smtp.gmail.com", 587)
+    assert server.logins == [("me@gmail.com", "app-pass-word")]
+    (mail,) = server.sent
+    assert (mail["From"], mail["To"]) == ("me@gmail.com", "me@gmail.com")
+    assert mail["Subject"] == "URGENT: Possible intruder at Front Door"
+    assert mail.get_content().strip() == URGENT.body
+
+
+def test_email_can_go_to_a_different_address_and_routine_alerts_are_not_marked_urgent(store: SecretStore) -> None:
+    server = FakeMailServer()
+    store.save_notify({**MAILBOX, "email_to": "5550100123@carrier.example"})
+    mailer(store, server).send(Message("Package delivered at Front Door", "A box on the step. (10:00 AM)"))
+    (mail,) = server.sent
+    assert (mail["To"], mail["Subject"]) == ("5550100123@carrier.example", "Package delivered at Front Door")
+
+
+def test_a_camera_name_with_a_line_break_cannot_inject_mail_headers(store: SecretStore) -> None:
+    server = FakeMailServer()
+    store.save_notify(MAILBOX)
+    mailer(store, server).send(Message("Person seen at Door\r\nBcc: stranger@example.com", "body"))
+    (mail,) = server.sent
+    assert mail["Bcc"] is None
+    assert mail["Subject"] == "Person seen at Door Bcc: stranger@example.com"
+
+
+def test_rejected_mail_sign_in_points_at_the_app_password_without_revealing_it(store: SecretStore) -> None:
+    store.save_notify(MAILBOX)
+    with pytest.raises(NotifyError, match="app password") as caught:
+        mailer(store, FakeMailServer(reject_login=True)).send(URGENT)
+    assert "app-pass-word" not in str(caught.value)
+
+
+def test_unreachable_mail_server_does_not_stop_the_other_channels(store: SecretStore) -> None:
+    store.save_notify({**MAILBOX, "ntfy_topic": "camsentry-secret-topic"})
+    delivery = mailer(store, FakeMailServer(unreachable=True)).send(URGENT)
+    assert delivery.delivered == ["ntfy"]
+    assert delivery.failures == ["email: could not send (OSError)"]
+
+
+@pytest.mark.parametrize(("address", "host"), [("me@gmail.com", "smtp.gmail.com"), ("Me@Outlook.com", "smtp-mail.outlook.com"), ("me@icloud.com", "smtp.mail.me.com"), ("me@mycompany.example", None)])
+def test_big_mail_providers_need_no_server_name(address: str, host: str | None) -> None:
+    assert smtp_host_for(address) == host
+
+
+@pytest.mark.parametrize(("text", "ok"), [("me@gmail.com", True), ("5550100123@carrier.example", True), ("me@gmail", False), ("not an address", False), ("a@b@c.com", False), ("", False)])
+def test_email_addresses_are_checked(text: str, ok: bool) -> None:
+    assert valid_email(text) is ok
