@@ -181,7 +181,7 @@ Chosen in `camsentry-mcp setup`, changed with `camsentry-mcp notify …`. Destin
 | Channel | Command | Cost | What leaves your machine |
 | --- | --- | --- | --- |
 | **ntfy** push (recommended) | `notify ntfy` | free, no account | Alert text, to ntfy.sh or your own ntfy server. You install the ntfy app and subscribe to a private topic. |
-| **Text via your carrier** | `notify text` | free | Alert text, from your own mailbox to your carrier's email-to-text address (Verizon, T-Mobile, Google Fi). Needs an app password for the mailbox. Being phased out by carriers: see below. |
+| **Text via your carrier** | `notify text` | free | Alert text, from your own mailbox to your carrier's email-to-text address (T-Mobile and Google Fi only). Needs an app password for the mailbox. Being phased out by carriers: see below. |
 | **Email** | `notify email` | free | Alert text, through your own mailbox to yourself. Needs an app password for that mailbox (Gmail, Outlook, Yahoo and iCloud servers are known; others ask for the server name). |
 | **Text via Textbelt** | `notify sms` | a few cents per text | Alert text and your number, to textbelt.com. You buy a key there; its free key does not send to US numbers. Some antivirus products block that site. |
 | **Webhook** | `notify webhook` | free | Alert as JSON (`title`, `body`, `urgent`) to a URL of yours: Home Assistant, Discord, Slack. |
@@ -193,10 +193,11 @@ that used to send to any address (ntfy.sh's email, Textbelt's free texts) have c
 abuse. So email goes out through a mailbox you already own. Images are never sent anywhere.
 
 > [!WARNING]
-> **Carrier email-to-text is a stopgap.** AT&T closed its address in June 2025.
-> [Verizon is closing `vtext.com` by 31 March 2027](https://www.verizon.com/support/vtext-vzwpix-shutdown)
-> and says messages may already be dropped by spam filtering. A text that is dropped produces no error.
-> Keep ntfy set up as well if an alert must reach you.
+> **Carrier email-to-text is a stopgap, and gone on the two largest US carriers.** AT&T closed its address
+> in June 2025. [Verizon is closing `vtext.com`](https://www.verizon.com/support/vtext-vzwpix-shutdown):
+> in November 2026 it already bounced an alert sent from a Gmail mailbox as decommissioned, so Verizon is
+> not offered. T-Mobile and Google Fi addresses are offered but were not tested by this project. A text
+> that a carrier drops as spam produces no error. Keep ntfy or email set up as well.
 
 ## Settings
 

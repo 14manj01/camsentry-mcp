@@ -254,7 +254,7 @@ def test_email_addresses_are_checked(text: str, ok: bool) -> None:
 
 @pytest.mark.parametrize(
     ("phone", "carrier", "address"),
-    [("(555) 010-0123", "verizon", "5550100123@vtext.com"), ("+1 555 010 0123", "t-mobile", "5550100123@tmomail.net"), ("15550100123", "google-fi", "5550100123@msg.fi.google.com")],
+    [("(555) 010-0123", "t-mobile", "5550100123@tmomail.net"), ("+1 555 010 0123", "t-mobile", "5550100123@tmomail.net"), ("15550100123", "google-fi", "5550100123@msg.fi.google.com")],
 )
 def test_carrier_text_address_is_built_from_the_number(phone: str, carrier: str, address: str) -> None:
     assert text_address(phone, carrier) == address
@@ -263,12 +263,12 @@ def test_carrier_text_address_is_built_from_the_number(phone: str, carrier: str,
 @pytest.mark.parametrize("phone", ["555-0100", "+44 20 7946 0958 22", ""])
 def test_carrier_text_addresses_need_a_ten_digit_us_number(phone: str) -> None:
     with pytest.raises(ValueError, match="10-digit"):
-        text_address(phone, "verizon")
+        text_address(phone, "t-mobile")
 
 
 def test_a_text_through_the_carrier_is_one_short_line_without_a_subject(store: SecretStore) -> None:
     server = FakeMailServer()
-    store.save_notify({**MAILBOX, "email_to": "", "text_to": "5550100123@vtext.com"})
+    store.save_notify({**MAILBOX, "email_to": "", "text_to": "5550100123@tmomail.net"})
     long_alert = Message("Someone is lingering at Front Door", "A person has been in view for about 7 minutes. " + "They are still standing by the gate. " * 6, urgent=False)
 
     assert mailer(store, server).send(URGENT).delivered == ["text"]
@@ -280,15 +280,15 @@ def test_a_text_through_the_carrier_is_one_short_line_without_a_subject(store: S
     body = cut.get_content().strip()
     assert 150 < len(body) <= 160, "fits in one text message"
     assert body.endswith("...") and body.startswith("Someone is lingering at Front Door: A person")
-    assert (short["From"], short["To"]) == ("me@gmail.com", "5550100123@vtext.com")
+    assert (short["From"], short["To"]) == ("me@gmail.com", "5550100123@tmomail.net")
 
 
 def test_text_and_email_can_both_be_on_and_each_gets_its_own_form(store: SecretStore) -> None:
     server = FakeMailServer()
-    store.save_notify({**MAILBOX, "text_to": "5550100123@vtext.com"})
+    store.save_notify({**MAILBOX, "text_to": "5550100123@tmomail.net"})
 
     assert mailer(store, server).send(URGENT).delivered == ["text", "email"]
 
     as_text, as_email = server.sent
-    assert (as_text["To"], as_text["Subject"]) == ("5550100123@vtext.com", None)
+    assert (as_text["To"], as_text["Subject"]) == ("5550100123@tmomail.net", None)
     assert (as_email["To"], as_email["Subject"]) == ("me@gmail.com", "URGENT: Possible intruder at Front Door")

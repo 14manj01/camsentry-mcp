@@ -174,10 +174,9 @@ def _notify_text(secret_store: SecretStore, suggested: str = "", phone: str = ""
     if not _require_terminal():
         return 2
     print("Text messages through your mobile carrier's email-to-text address. It is free, but do not rely on it alone:")
-    print("  - Verizon is closing its address by 31 March 2027, and AT&T closed its own in 2025.")
-    print("  - Carriers drop some of these messages as spam, and block them all for numbers that opted out.")
-    print("    On Verizon, text STATUS to 4040 to see whether your number allows them, and ON to allow them.")
-    print("Keep `camsentry-mcp notify ntfy` as a second channel for alerts that matter.\n")
+    print("  - AT&T and Verizon have closed theirs; mail to a Verizon number now bounces.")
+    print("  - The remaining carriers drop some of these messages as spam without telling anyone.")
+    print("Keep `camsentry-mcp notify ntfy` or `notify email` as a second channel for alerts that matter.\n")
     phone = phone or input("Mobile number (10 digits, US): ")
     carrier = (carrier or input(f"Carrier ({', '.join(TEXT_GATEWAYS)}): ")).strip().lower()
     if carrier not in TEXT_GATEWAYS:
@@ -311,7 +310,7 @@ def _setup(secret_store: SecretStore, settings: Settings) -> int:
 
     print("\nStep 3 of 3: how should camera alerts reach you?")
     print("  1. Free notifications in the ntfy phone app (no account)")
-    print("  2. Text message through your carrier's email-to-text address (free; Verizon, T-Mobile, Google Fi)")
+    print("  2. Text message through your carrier's email-to-text address (free; T-Mobile and Google Fi only)")
     print("  3. Email from your own mailbox")
     print("  4. Text message through textbelt.com (a few cents per text)")
     print("  5. Not now")

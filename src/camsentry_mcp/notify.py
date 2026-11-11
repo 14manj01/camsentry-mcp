@@ -45,12 +45,12 @@ _SMTP_HOSTS = {
 }
 SMTP_PORT = 587
 
-# Carrier addresses that turn an email into a text message, free of charge. They are disappearing:
-# AT&T closed its gateway on 17 June 2025 and Verizon has announced the end of vtext.com by
-# 31 March 2027 (https://www.verizon.com/support/vtext-vzwpix-shutdown). Carriers also filter
-# these messages as spam without telling the sender, so a text can silently fail to arrive.
+# Carrier addresses that turn an email into a text message, free of charge. They are disappearing,
+# and only the ones not known to be closed are listed. AT&T closed its gateway on 17 June 2025.
+# Verizon is closing vtext.com (https://www.verizon.com/support/vtext-vzwpix-shutdown) and in
+# November 2026 already bounced a message from a Gmail mailbox as decommissioned. Carriers also
+# filter these messages as spam without telling the sender, so a text can silently fail to arrive.
 TEXT_GATEWAYS = {
-    "verizon": "vtext.com",
     "t-mobile": "tmomail.net",
     "google-fi": "msg.fi.google.com",
 }
