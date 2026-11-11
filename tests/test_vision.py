@@ -73,11 +73,11 @@ def evidence(*entries: str) -> httpx.Response:
     return httpx.Response(200, json={"choices": [{"message": {"content": json.dumps({"evidence": list(entries)})}}]})
 
 
-def camera_model(answer: dict, humans: tuple[str, ...] = (), parcels: tuple[str, ...] = ()):
+def camera_model(answer: dict, humans: tuple[str, ...] = (), parcels: tuple[str, ...] = (), redescribed: str = "A parked van."):
     """A fake vision model: the first request describes the frame with `answer`.
 
     Later requests are second looks: asked only for human beings it lists `humans`, asked only for
-    parcels it lists `parcels`.
+    parcels it lists `parcels`. Asked to describe the frame again, it says `redescribed`.
     """
     requests = []
 
@@ -87,6 +87,8 @@ def camera_model(answer: dict, humans: tuple[str, ...] = (), parcels: tuple[str,
         prompt = body["messages"][-1]["content"][0]["text"]
         if len(requests) == 1:
             reply = answer
+        elif "Describe in one sentence" in prompt:
+            reply = {"summary": redescribed}
         elif "human beings" in prompt:
             reply = {"people": list(humans)}
         else:
@@ -121,8 +123,30 @@ def test_a_package_is_reported_only_when_a_second_look_also_finds_one() -> None:
     assert (result.people, result.packages) == (1, 0)
 
 
+def test_a_person_who_was_ruled_out_is_not_left_in_the_description() -> None:
+    claims = {**ANSWER, "summary": "A person is climbing a fence next to a parked van.", "packages": [], "suspicious": True, "suspicious_reason": "Climbing a fence."}
+    handler, requests = camera_model(claims, redescribed="A parked van next to a fence.")
+
+    result = detector(handler).detect(JPEG, "image/jpeg")
+
+    assert (result.people, result.summary) == (0, "A parked van next to a fence.")
+    assert (result.suspicious, result.suspicious_reason) == (False, ""), "nobody is there to be suspicious"
+    assert "no human beings" in requests[-1][1]["messages"][-1]["content"][0]["text"]
+
+
+def test_a_person_only_mentioned_in_the_description_gets_a_second_look_too() -> None:
+    forgot_the_list = {**ANSWER, "summary": "A man walks past a parked van.", "people": [], "packages": []}
+
+    confirmed, _ = camera_model(forgot_the_list, humans=("man on the pavement", "second man behind him"))
+    assert detector(confirmed).detect(JPEG, "image/jpeg").people == 2
+
+    phantom, _ = camera_model(forgot_the_list)
+    result = detector(phantom).detect(JPEG, "image/jpeg")
+    assert (result.people, result.summary) == (0, "A parked van.")
+
+
 def test_frames_without_people_or_packages_cost_a_single_model_call() -> None:
-    handler, requests = camera_model({**ANSWER, "people": [], "packages": []})
+    handler, requests = camera_model({**ANSWER, "summary": "A van is parked while a dog watches.", "people": [], "packages": []})
     result = detector(handler).detect(JPEG, "image/jpeg")
     assert (result.people, result.packages, result.vehicles) == (0, 0, 1)
     assert len(requests) == 1

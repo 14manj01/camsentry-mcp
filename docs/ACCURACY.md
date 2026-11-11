@@ -37,8 +37,17 @@ With it: no phantom person in those 23 images, at the price of the one distant p
 kept both real parcels, dropped the one phantom parcel seen during live testing, and dropped the box the
 courier was still holding.
 
-The one-sentence description is not corrected. It can still mention a person the second look rejected;
-alerts and counts follow the second look, not the sentence.
+### The description is rewritten when the second look disagrees
+
+The one-sentence description is written during the first look, so it used to keep the person the second
+look had just ruled out. On 88 real stills from six cameras, 33 descriptions mentioned a person although
+the count said nobody was there; the seven that were checked by eye showed no person. Those sentences are
+what the timeline, the search and your chat model read, so they would have reported visitors who never came.
+
+Now, when a second look rules something out, the model is asked for a new description that leaves it out,
+and a scene without people is never marked suspicious. A person mentioned in the description but missing
+from the list also gets the second look. On the same 88 stills: 0 descriptions mention a person the count
+denies, the 4 stills with a confirmed person are unchanged, and a still takes 1.3 s on average.
 
 ## Model comparison on the street stills
 

@@ -105,6 +105,29 @@ _SECOND_LOOKS = {
     ),
 }
 
+# What a second look calls a thing it did not find, for the prompt that rewrites the description.
+_ABSENT = {"people": "human beings", "packages": "delivered parcels"}
+_MENTIONS_HUMAN = re.compile(
+    r"\b(person|people|man|men|woman|women|pedestrian|someone|somebody|individual|child|children|kid|boy|girl|figure)s?\b",
+    re.IGNORECASE,
+)
+
+# The first description is written before the second look, so it still talks about the person or
+# parcel that was just ruled out: on 88 real stills, 33 descriptions mentioned a person nobody could
+# find. That sentence is what the timeline, the search and the user's chat model read.
+_REDESCRIBE_PROMPT = (
+    "A careful check of this image found no {absent}. Describe in one sentence what the image does show, "
+    "without mentioning any {absent}.\n"
+    "Reply with JSON only, using exactly this field:\n"
+    "summary: the sentence."
+)
+_SUMMARY_SCHEMA = {
+    "type": "object",
+    "properties": {"summary": {"type": "string"}},
+    "required": ["summary"],
+    "additionalProperties": False,
+}
+
 
 class VisionError(Exception):
     """The local vision model gave an unusable answer for this image."""
@@ -262,16 +285,31 @@ class VisionDetector:
         The numbers are in docs/ACCURACY.md.
         """
         detection = parse_detection(self._ask(image, mime, _PROMPT, "detection", _SCHEMA))
+        ruled_out = []
         for field, prompt in _SECOND_LOOKS.items():
-            if getattr(detection, field):
-                schema = {
-                    "type": "object",
-                    "properties": {field: {"type": "array", "items": {"type": "string"}}},
-                    "required": [field],
-                    "additionalProperties": False,
-                }
-                if not _entries(_json_object(self._ask(image, mime, prompt, field, schema)), field):
-                    detection = replace(detection, **{field: 0})
+            # The model sometimes describes a person and then leaves the people list empty.
+            listed = getattr(detection, field)
+            if not listed and not (field == "people" and _MENTIONS_HUMAN.search(detection.summary)):
+                continue
+            schema = {
+                "type": "object",
+                "properties": {field: {"type": "array", "items": {"type": "string"}}},
+                "required": [field],
+                "additionalProperties": False,
+            }
+            found = len(_entries(_json_object(self._ask(image, mime, prompt, field, schema)), field))
+            if not found:
+                detection = replace(detection, **{field: 0})
+                ruled_out.append(_ABSENT[field])
+            elif not listed:
+                detection = replace(detection, **{field: min(found, 99)})
+        if ruled_out:
+            prompt = _REDESCRIBE_PROMPT.format(absent=" or ".join(ruled_out))
+            answer = _json_object(self._ask(image, mime, prompt, "summary", _SUMMARY_SCHEMA))
+            detection = replace(detection, summary=clean_text(answer.get("summary"), _MAX_SUMMARY))
+        if not detection.people:
+            # Only a person can be doing something suspicious.
+            detection = replace(detection, suspicious=False, suspicious_reason="")
         return detection
 
     def check(self, image: bytes, mime: str, statements: Sequence[str]) -> tuple[bool, ...]:
