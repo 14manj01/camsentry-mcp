@@ -20,12 +20,14 @@ from .config import ConfigError, Settings
 from .credentials import CredentialStoreError, SecretStore, Tokens
 from .notify import (
     FREE_SMS_KEY,
+    TEXT_GATEWAYS,
     Message,
     Notifier,
     NotifyError,
     new_ntfy_topic,
     normalize_phone,
     smtp_host_for,
+    text_address,
     valid_email,
 )
 from .server import create_watch, quiet_library_logging, serve
@@ -128,11 +130,17 @@ def _notify_sms(secret_store: SecretStore) -> int:
     return 0
 
 
-def _notify_email(secret_store: SecretStore, suggested: str = "") -> int:
+def _notify_email(secret_store: SecretStore, suggested: str = "", recipient: str = "") -> int:
+    """Set up the mailbox alerts are sent from. `recipient` fixes where they go (a carrier text address)."""
     if not _require_terminal():
         return 2
-    print("Alerts are emailed from your own mailbox, to yourself unless you say otherwise.")
-    print("The mailbox needs an app password, which is not your normal mail password:")
+    saved = secret_store.load_notify()
+    if recipient and saved.get("email_password"):
+        _save_destination(secret_store, email_to=recipient)
+        print(f"Using the mailbox that is already set up ({saved['email_address']}).")
+        print("Send a test with `camsentry-mcp notify test`.")
+        return 0
+    print("Alerts are sent from your own mailbox. It needs an app password, which is not your normal mail password:")
     print("  Gmail:  https://myaccount.google.com/apppasswords (2-Step Verification has to be on)")
     print("  Others: look for 'app password' in the security settings of your mail account.\n")
     address = input(f"Your email address{f' [{suggested}]' if suggested else ''}: ").strip() or suggested
@@ -143,13 +151,34 @@ def _notify_email(secret_store: SecretStore, suggested: str = "") -> int:
     password = getpass("App password (hidden): ")
     if host == "smtp.gmail.com":
         password = password.replace(" ", "")  # Google displays app passwords in four spaced groups
-    recipient = input("Send alerts to (press Enter for the same address): ").strip() or address
+    recipient = recipient or input("Send alerts to (press Enter for the same address): ").strip() or address
     if not host or not password or not valid_email(recipient):
         print("A mail server, an app password and a valid recipient are all needed.", file=sys.stderr)
         return 1
     _save_destination(secret_store, email_address=address, email_password=password, email_host=host, email_to=recipient)
     print(f"Saved to {secret_store.backend_name}. Send a test with `camsentry-mcp notify test`.")
     return 0
+
+
+def _notify_text(secret_store: SecretStore, suggested: str = "", phone: str = "", carrier: str = "") -> int:
+    """Text messages through the carrier's email-to-text address, sent from the user's own mailbox."""
+    if not _require_terminal():
+        return 2
+    print("Text messages through your mobile carrier's email-to-text address. It is free, but do not rely on it alone:")
+    print("  - Verizon is closing its address by 31 March 2027, and AT&T closed its own in 2025.")
+    print("  - Carriers drop some of these messages as spam without telling anyone.")
+    print("Keep `camsentry-mcp notify ntfy` as a second channel for alerts that matter.\n")
+    phone = phone or input("Mobile number (10 digits, US): ")
+    carrier = (carrier or input(f"Carrier ({', '.join(TEXT_GATEWAYS)}): ")).strip().lower()
+    if carrier not in TEXT_GATEWAYS:
+        print(f"No working email-to-text address is known for that carrier. Known: {', '.join(TEXT_GATEWAYS)}.", file=sys.stderr)
+        return 1
+    try:
+        recipient = text_address(phone, carrier)
+    except ValueError as err:
+        print(str(err), file=sys.stderr)
+        return 1
+    return _notify_email(secret_store, suggested, recipient)
 
 
 def _notify_ntfy(secret_store: SecretStore, settings: Settings) -> int:
@@ -268,18 +297,21 @@ def _setup(secret_store: SecretStore, settings: Settings) -> int:
 
     print("\nStep 3 of 3: how should camera alerts reach you?")
     print("  1. Free notifications in the ntfy phone app (no account)")
-    print("  2. Email from your own mailbox (needs an app password)")
-    print("  3. Text message (SMS, a few cents per text)")
-    print("  4. Not now")
-    choice = input("Choose 1, 2, 3 or 4: ").strip()
+    print("  2. Text message through your carrier's email-to-text address (free; Verizon, T-Mobile, Google Fi)")
+    print("  3. Email from your own mailbox")
+    print("  4. Text message through textbelt.com (a few cents per text)")
+    print("  5. Not now")
+    choice = input("Choose 1 to 5: ").strip()
     if choice == "1":
         _notify_ntfy(secret_store, settings)
         input("Press Enter once you have subscribed in the app, and a test will be sent...")
-    elif choice == "2" and _notify_email(secret_store, wyze_email) != 0:
+    elif choice == "2" and _notify_text(secret_store, wyze_email) != 0:
         return 1
-    elif choice == "3" and _notify_sms(secret_store) != 0:
+    elif choice == "3" and _notify_email(secret_store, wyze_email) != 0:
         return 1
-    if choice in ("1", "2", "3"):
+    elif choice == "4" and _notify_sms(secret_store) != 0:
+        return 1
+    if choice in ("1", "2", "3", "4"):
         _notify_test(secret_store, settings)
 
     print("\nDone. Add this to your chat app's MCP servers and your model can use the cameras:\n")
@@ -337,7 +369,9 @@ def main(argv: list[str] | None = None) -> int:
     commands.add_parser("login", help="sign in to Wyze and store session tokens in the OS keychain")
     commands.add_parser("logout", help="revoke the Wyze session and delete the stored tokens")
     notify = commands.add_parser("notify", help="choose where alerts are sent")
-    notify.add_argument("action", choices=["ntfy", "email", "sms", "webhook", "test", "off"])
+    notify.add_argument("action", choices=["ntfy", "text", "email", "sms", "webhook", "test", "off"])
+    notify.add_argument("--phone", default="", help="mobile number for `notify text`")
+    notify.add_argument("--carrier", default="", choices=["", *TEXT_GATEWAYS], help="carrier for `notify text`")
     commands.add_parser("forget", help="delete the remembered history of what the cameras saw")
     start = commands.add_parser("autostart", help="start the watcher each time you log in")
     start.add_argument("action", choices=["on", "off"])
@@ -364,6 +398,7 @@ def main(argv: list[str] | None = None) -> int:
             return _logout(secret_store)
         if args.command == "notify":
             actions = {
+                "text": lambda: _notify_text(secret_store, phone=args.phone, carrier=args.carrier),
                 "email": lambda: _notify_email(secret_store),
                 "sms": lambda: _notify_sms(secret_store),
                 "ntfy": lambda: _notify_ntfy(secret_store, settings),

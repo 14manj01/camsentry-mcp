@@ -181,17 +181,22 @@ Chosen in `camsentry-mcp setup`, changed with `camsentry-mcp notify …`. Destin
 | Channel | Command | Cost | What leaves your machine |
 | --- | --- | --- | --- |
 | **ntfy** push (recommended) | `notify ntfy` | free, no account | Alert text, to ntfy.sh or your own ntfy server. You install the ntfy app and subscribe to a private topic. |
+| **Text via your carrier** | `notify text` | free | Alert text, from your own mailbox to your carrier's email-to-text address (Verizon, T-Mobile, Google Fi). Needs an app password for the mailbox. Being phased out by carriers: see below. |
 | **Email** | `notify email` | free | Alert text, through your own mailbox to yourself. Needs an app password for that mailbox (Gmail, Outlook, Yahoo and iCloud servers are known; others ask for the server name). |
-| **SMS** | `notify sms` | a few cents per text | Alert text and your number, to textbelt.com. You buy a key there; its free key does not send to US numbers. Some antivirus products block that site. |
+| **Text via Textbelt** | `notify sms` | a few cents per text | Alert text and your number, to textbelt.com. You buy a key there; its free key does not send to US numbers. Some antivirus products block that site. |
 | **Webhook** | `notify webhook` | free | Alert as JSON (`title`, `body`, `urgent`) to a URL of yours: Home Assistant, Discord, Slack. |
 
 `camsentry-mcp notify test` sends a test; `camsentry-mcp notify off` removes every destination.
 
 An email address alone is not enough to be notified: something has to send the mail, and the free services
 that used to send to any address (ntfy.sh's email, Textbelt's free texts) have closed that door because of
-abuse. So email goes out through a mailbox you already own. If your mobile carrier still offers an
-email-to-text address for your number, giving that as the recipient turns each alert into a text message.
-Images are never sent anywhere.
+abuse. So email goes out through a mailbox you already own. Images are never sent anywhere.
+
+> [!WARNING]
+> **Carrier email-to-text is a stopgap.** AT&T closed its address in June 2025.
+> [Verizon is closing `vtext.com` by 31 March 2027](https://www.verizon.com/support/vtext-vzwpix-shutdown)
+> and says messages may already be dropped by spam filtering. A text that is dropped produces no error.
+> Keep ntfy set up as well if an alert must reach you.
 
 ## Settings
 
@@ -208,7 +213,7 @@ Nothing has to be set. These environment variables exist for when you want somet
 | `CAMSENTRY_NTFY_SERVER` | `https://ntfy.sh` | Your own ntfy server. |
 | `CAMSENTRY_DATA_DIR` | per-user data folder | Where the memory database lives. |
 
-Commands: `setup`, `status`, `watch`, `autostart on|off`, `notify ntfy|email|sms|webhook|test|off`, `login`,
+Commands: `setup`, `status`, `watch`, `autostart on|off`, `notify ntfy|text|email|sms|webhook|test|off`, `login`,
 `logout`, `forget` (deletes the remembered history), and no command at all to run the MCP server.
 
 Watching uses your GPU each time a camera records something. If you also run a large chat model on the

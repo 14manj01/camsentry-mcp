@@ -45,6 +45,17 @@ _SMTP_HOSTS = {
 }
 SMTP_PORT = 587
 
+# Carrier addresses that turn an email into a text message, free of charge. They are disappearing:
+# AT&T closed its gateway on 17 June 2025 and Verizon has announced the end of vtext.com by
+# 31 March 2027 (https://www.verizon.com/support/vtext-vzwpix-shutdown). Carriers also filter
+# these messages as spam without telling the sender, so a text can silently fail to arrive.
+TEXT_GATEWAYS = {
+    "verizon": "vtext.com",
+    "t-mobile": "tmomail.net",
+    "google-fi": "msg.fi.google.com",
+}
+MAX_SMS = 160
+
 _TITLES = {
     "intruder": "Possible intruder",
     "package_taken": "Package may have been taken",
@@ -118,6 +129,16 @@ def valid_email(address: str) -> bool:
     return re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", address) is not None
 
 
+def text_address(phone: str, carrier: str) -> str:
+    """The email address at a carrier that delivers to a US mobile number as a text message."""
+    digits = re.sub(r"\D", "", phone)
+    if len(digits) == 11 and digits.startswith("1"):
+        digits = digits[1:]
+    if len(digits) != 10:
+        raise ValueError("A carrier text address needs a 10-digit US mobile number.")
+    return f"{digits}@{TEXT_GATEWAYS[carrier]}"
+
+
 class Notifier:
     def __init__(
         self,
@@ -179,9 +200,14 @@ class Notifier:
         """Send through the user's own mailbox: it signs in as them and mails the alert."""
         mail = EmailMessage()
         mail["From"] = saved["email_address"]
-        mail["To"] = saved.get("email_to") or saved["email_address"]
-        mail["Subject"] = ("URGENT: " if message.urgent else "") + " ".join(message.title.split())
-        mail.set_content(message.body)
+        mail["To"] = recipient = saved.get("email_to") or saved["email_address"]
+        if recipient.rpartition("@")[2].lower() in TEXT_GATEWAYS.values():
+            # It will be read as a text message: one short line, no subject for the carrier to prepend.
+            text = message.text()
+            mail.set_content(text if len(text) <= MAX_SMS else text[: MAX_SMS - 3].rstrip() + "...")
+        else:
+            mail["Subject"] = ("URGENT: " if message.urgent else "") + " ".join(message.title.split())
+            mail.set_content(message.body)
         refused = NotifyError("email: the mail server refused the sign-in. Check the address and the app password.")
         try:
             with self._smtp(saved["email_host"], SMTP_PORT, timeout=20) as server:

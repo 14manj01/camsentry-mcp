@@ -16,6 +16,7 @@ from camsentry_mcp.notify import (
     new_ntfy_topic,
     normalize_phone,
     smtp_host_for,
+    text_address,
     valid_email,
 )
 
@@ -246,3 +247,36 @@ def test_big_mail_providers_need_no_server_name(address: str, host: str | None) 
 @pytest.mark.parametrize(("text", "ok"), [("me@gmail.com", True), ("5550100123@carrier.example", True), ("me@gmail", False), ("not an address", False), ("a@b@c.com", False), ("", False)])
 def test_email_addresses_are_checked(text: str, ok: bool) -> None:
     assert valid_email(text) is ok
+
+
+# -- text messages through a carrier's email-to-text address -------------------
+
+
+@pytest.mark.parametrize(
+    ("phone", "carrier", "address"),
+    [("(555) 010-0123", "verizon", "5550100123@vtext.com"), ("+1 555 010 0123", "t-mobile", "5550100123@tmomail.net"), ("15550100123", "google-fi", "5550100123@msg.fi.google.com")],
+)
+def test_carrier_text_address_is_built_from_the_number(phone: str, carrier: str, address: str) -> None:
+    assert text_address(phone, carrier) == address
+
+
+@pytest.mark.parametrize("phone", ["555-0100", "+44 20 7946 0958 22", ""])
+def test_carrier_text_addresses_need_a_ten_digit_us_number(phone: str) -> None:
+    with pytest.raises(ValueError, match="10-digit"):
+        text_address(phone, "verizon")
+
+
+def test_mail_to_a_carrier_text_address_is_one_short_line_without_a_subject(store: SecretStore) -> None:
+    server = FakeMailServer()
+    store.save_notify({**MAILBOX, "email_to": "5550100123@vtext.com"})
+    long_alert = Message("Someone is lingering at Front Door", "A person has been in view for about 7 minutes. " + "They are still standing by the gate. " * 6, urgent=False)
+
+    mailer(store, server).send(URGENT)
+    mailer(store, server).send(long_alert)
+
+    short, cut = server.sent
+    assert short["Subject"] is None and cut["Subject"] is None
+    assert short.get_content().strip() == URGENT.text()
+    body = cut.get_content().strip()
+    assert 150 < len(body) <= 160, "fits in one text message"
+    assert body.endswith("...") and body.startswith("Someone is lingering at Front Door: A person")
