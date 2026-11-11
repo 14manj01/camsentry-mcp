@@ -64,6 +64,19 @@ ollmcp, …). There is nothing secret in it and nothing to configure:
 }
 ```
 
+<details>
+<summary>The same thing for <b>opencode</b> (<code>~/.config/opencode/opencode.json</code>)</summary>
+
+```json
+{
+  "mcp": {
+    "camsentry": { "type": "local", "command": ["camsentry-mcp"], "enabled": true }
+  }
+}
+```
+
+</details>
+
 That is all. While the chat app runs, the cameras are watched and alerts reach your phone. To keep watching
 without the chat app, run `camsentry-mcp watch`.
 

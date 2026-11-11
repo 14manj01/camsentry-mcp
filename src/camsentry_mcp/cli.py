@@ -125,6 +125,7 @@ def _notify_ntfy(secret_store: SecretStore, settings: Settings) -> int:
     print("  1. Install the ntfy app (Android or iPhone).")
     print(f"  2. In the app, subscribe to this topic on {settings.ntfy_server}:")
     print(f"\n       {topic}\n")
+    print(f"     Or open this address on the phone: {settings.ntfy_server}/{topic}")
     print("The topic name works like a password: anyone who knows it can read your alerts.")
     print("Send a test with `camsentry-mcp notify test`.")
     return 0
