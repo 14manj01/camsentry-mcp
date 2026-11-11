@@ -15,7 +15,7 @@ import requests
 from wyze_sdk import Client
 from wyze_sdk.errors import WyzeApiError, WyzeClientError
 
-from . import __version__
+from . import __version__, autostart
 from .config import ConfigError, Settings
 from .credentials import CredentialStoreError, SecretStore, Tokens
 from .notify import FREE_SMS_KEY, Message, Notifier, NotifyError, new_ntfy_topic, normalize_phone
@@ -202,6 +202,7 @@ def _status(secret_store: SecretStore, settings: Settings) -> int:
     print(f"Armed hours:   {settings.armed_hours or 'not set'}")
     watching = f"every {settings.poll_seconds} s while the server or `camsentry-mcp watch` runs" if settings.poll_seconds else "off"
     print(f"Watching:      {watching}")
+    print(f"At login:      {'the watcher starts by itself' if autostart.is_enabled() else 'not started (see `camsentry-mcp autostart on`)'}")
     print(f"Memory:        {settings.data_dir / 'camsentry.db'}")
     return 0 if healthy else 1
 
@@ -244,7 +245,8 @@ def _setup(secret_store: SecretStore, settings: Settings) -> int:
 
     print("\nDone. Add this to your chat app's MCP servers and your model can use the cameras:\n")
     print(_mcp_config())
-    print("\nCameras are watched whenever that app is running. To watch without it, run `camsentry-mcp watch`.")
+    print("\nCameras are watched whenever that app is running. To watch all the time, run")
+    print("`camsentry-mcp autostart on` and the watcher starts each time you log in.")
     return 0
 
 
@@ -262,6 +264,18 @@ def _watch(settings: Settings) -> int:
             time.sleep(settings.poll_seconds)
     except KeyboardInterrupt:
         return 0
+
+
+def _autostart(action: str) -> int:
+    if action == "on":
+        path = autostart.enable()
+        print(f"The watcher will start each time you log in ({path}).")
+        print("To start it now without logging out, run `camsentry-mcp watch`.")
+    elif autostart.disable():
+        print("The watcher will no longer start at login. One that is already running keeps going until you log out.")
+    else:
+        print("Autostart was not on.")
+    return 0
 
 
 def _forget(settings: Settings) -> int:
@@ -286,6 +300,8 @@ def main(argv: list[str] | None = None) -> int:
     notify = commands.add_parser("notify", help="choose where alerts are sent")
     notify.add_argument("action", choices=["sms", "ntfy", "webhook", "test", "off"])
     commands.add_parser("forget", help="delete the remembered history of what the cameras saw")
+    start = commands.add_parser("autostart", help="start the watcher each time you log in")
+    start.add_argument("action", choices=["on", "off"])
     args = parser.parse_args(argv)
 
     quiet_library_logging()
@@ -296,6 +312,8 @@ def main(argv: list[str] | None = None) -> int:
         settings = Settings.from_env(os.environ)
         if args.command == "watch":
             return _watch(settings)
+        if args.command == "autostart":
+            return _autostart(args.action)
         if args.command == "forget":
             return _forget(settings)
         secret_store = SecretStore()

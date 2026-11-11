@@ -85,6 +85,10 @@ up to the lens). The design assumes the model may be manipulated:
 The server speaks MCP over stdio only. It opens no network port. Its background watcher makes outgoing
 requests to Wyze, to your local model server and to your notification service, and nothing else.
 
+`camsentry-mcp autostart on` writes one file into your per-user login-items folder (the Startup folder on
+Windows, `~/Library/LaunchAgents` on macOS, `~/.config/autostart` on Linux) that runs the watcher as you.
+It needs no administrator rights, installs no system service, and `autostart off` deletes the file.
+
 ### Logging
 
 Two libraries would otherwise write secrets to the server's stderr, and both are silenced:

@@ -78,7 +78,8 @@ ollmcp, …). There is nothing secret in it and nothing to configure:
 </details>
 
 That is all. While the chat app runs, the cameras are watched and alerts reach your phone. To keep watching
-without the chat app, run `camsentry-mcp watch`.
+when it is closed, run `camsentry-mcp autostart on`: the watcher then starts in the background each time
+you log in (`autostart off` undoes it). `camsentry-mcp watch` runs it in a terminal instead.
 
 ## What it does
 
@@ -201,8 +202,11 @@ Nothing has to be set. These environment variables exist for when you want somet
 | `CAMSENTRY_NTFY_SERVER` | `https://ntfy.sh` | Your own ntfy server. |
 | `CAMSENTRY_DATA_DIR` | per-user data folder | Where the memory database lives. |
 
-Commands: `setup`, `status`, `watch`, `notify sms|ntfy|webhook|test|off`, `login`, `logout`, `forget`
-(deletes the remembered history), and no command at all to run the MCP server.
+Commands: `setup`, `status`, `watch`, `autostart on|off`, `notify sms|ntfy|webhook|test|off`, `login`,
+`logout`, `forget` (deletes the remembered history), and no command at all to run the MCP server.
+
+Watching uses your GPU each time a camera records something. If you also run a large chat model on the
+same GPU, the two take turns and both get slower.
 
 ## Security
 
