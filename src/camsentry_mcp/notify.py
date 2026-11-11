@@ -156,7 +156,7 @@ class Notifier:
     def channels(self) -> list[str]:
         """Names of the channels that have a destination configured."""
         saved = self._secrets.load_notify()
-        known = (("email", "email_address"), ("sms", "sms_phone"), ("ntfy", "ntfy_topic"), ("webhook", "webhook_url"))
+        known = (("text", "text_to"), ("email", "email_to"), ("sms", "sms_phone"), ("ntfy", "ntfy_topic"), ("webhook", "webhook_url"))
         return [name for name, key in known if saved.get(key)]
 
     def _post(self, channel: str, url: str, **kwargs: Any) -> httpx.Response:
@@ -197,18 +197,24 @@ class Notifier:
         self._post("webhook", saved["webhook_url"], json={"title": message.title, "body": message.body, "urgent": message.urgent})
 
     def _email(self, saved: dict[str, str], message: Message) -> None:
-        """Send through the user's own mailbox: it signs in as them and mails the alert."""
         mail = EmailMessage()
+        mail["To"] = saved["email_to"]
+        mail["Subject"] = ("URGENT: " if message.urgent else "") + " ".join(message.title.split())
+        mail.set_content(message.body)
+        self._mail("email", saved, mail)
+
+    def _text(self, saved: dict[str, str], message: Message) -> None:
+        """To a carrier's email-to-text address: one short line, no subject for the carrier to prepend."""
+        text = message.text()
+        mail = EmailMessage()
+        mail["To"] = saved["text_to"]
+        mail.set_content(text if len(text) <= MAX_SMS else text[: MAX_SMS - 3].rstrip() + "...")
+        self._mail("text", saved, mail)
+
+    def _mail(self, channel: str, saved: dict[str, str], mail: EmailMessage) -> None:
+        """Send through the user's own mailbox: sign in as them and hand the message over."""
         mail["From"] = saved["email_address"]
-        mail["To"] = recipient = saved.get("email_to") or saved["email_address"]
-        if recipient.rpartition("@")[2].lower() in TEXT_GATEWAYS.values():
-            # It will be read as a text message: one short line, no subject for the carrier to prepend.
-            text = message.text()
-            mail.set_content(text if len(text) <= MAX_SMS else text[: MAX_SMS - 3].rstrip() + "...")
-        else:
-            mail["Subject"] = ("URGENT: " if message.urgent else "") + " ".join(message.title.split())
-            mail.set_content(message.body)
-        refused = NotifyError("email: the mail server refused the sign-in. Check the address and the app password.")
+        refused = NotifyError(f"{channel}: the mail server refused the sign-in. Check the address and the app password.")
         try:
             with self._smtp(saved["email_host"], SMTP_PORT, timeout=20) as server:
                 server.starttls(context=ssl.create_default_context())
@@ -219,7 +225,7 @@ class Notifier:
                     raise refused from None
                 server.send_message(mail)
         except (smtplib.SMTPException, OSError) as err:
-            raise NotifyError(f"email: could not send ({type(err).__name__})") from None
+            raise NotifyError(f"{channel}: could not send ({type(err).__name__})") from None
 
     def send(self, message: Message) -> Delivery:
         """Deliver through every configured channel and report which worked and which did not.
@@ -227,7 +233,7 @@ class Notifier:
         Raises NotifyError when nothing is configured or every channel failed.
         """
         saved = self._secrets.load_notify()
-        senders = {"email": self._email, "sms": self._sms, "ntfy": self._ntfy, "webhook": self._webhook}
+        senders = {"text": self._text, "email": self._email, "sms": self._sms, "ntfy": self._ntfy, "webhook": self._webhook}
         configured = self.channels()
         if not configured:
             raise NotifyError("No notification channel is set up. Run `camsentry-mcp setup` in a terminal.")

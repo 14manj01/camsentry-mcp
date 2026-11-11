@@ -130,32 +130,41 @@ def _notify_sms(secret_store: SecretStore) -> int:
     return 0
 
 
-def _notify_email(secret_store: SecretStore, suggested: str = "", recipient: str = "") -> int:
-    """Set up the mailbox alerts are sent from. `recipient` fixes where they go (a carrier text address)."""
-    if not _require_terminal():
-        return 2
+def _mailbox(secret_store: SecretStore, suggested: str = "") -> str | None:
+    """Make sure a mailbox to send from is saved. Returns its address, or None when the answers were unusable."""
     saved = secret_store.load_notify()
-    if recipient and saved.get("email_password"):
-        _save_destination(secret_store, email_to=recipient)
-        print(f"Using the mailbox that is already set up ({saved['email_address']}).")
-        print("Send a test with `camsentry-mcp notify test`.")
-        return 0
+    if saved.get("email_password"):
+        print(f"Sending from the mailbox that is already set up ({saved['email_address']}).")
+        return saved["email_address"]
     print("Alerts are sent from your own mailbox. It needs an app password, which is not your normal mail password:")
     print("  Gmail:  https://myaccount.google.com/apppasswords (2-Step Verification has to be on)")
     print("  Others: look for 'app password' in the security settings of your mail account.\n")
     address = input(f"Your email address{f' [{suggested}]' if suggested else ''}: ").strip() or suggested
     if not valid_email(address):
         print("That is not an email address.", file=sys.stderr)
-        return 1
+        return None
     host = smtp_host_for(address) or input("Outgoing mail (SMTP) server of that mailbox, e.g. smtp.example.com: ").strip()
     password = getpass("App password (hidden): ")
     if host == "smtp.gmail.com":
         password = password.replace(" ", "")  # Google displays app passwords in four spaced groups
-    recipient = recipient or input("Send alerts to (press Enter for the same address): ").strip() or address
-    if not host or not password or not valid_email(recipient):
-        print("A mail server, an app password and a valid recipient are all needed.", file=sys.stderr)
+    if not host or not password:
+        print("A mail server and an app password are both needed.", file=sys.stderr)
+        return None
+    _save_destination(secret_store, email_address=address, email_password=password, email_host=host)
+    return address
+
+
+def _notify_email(secret_store: SecretStore, suggested: str = "") -> int:
+    if not _require_terminal():
+        return 2
+    address = _mailbox(secret_store, suggested)
+    if address is None:
         return 1
-    _save_destination(secret_store, email_address=address, email_password=password, email_host=host, email_to=recipient)
+    recipient = input(f"Email alerts to [{address}]: ").strip() or address
+    if not valid_email(recipient):
+        print("That is not an email address.", file=sys.stderr)
+        return 1
+    _save_destination(secret_store, email_to=recipient)
     print(f"Saved to {secret_store.backend_name}. Send a test with `camsentry-mcp notify test`.")
     return 0
 
@@ -166,7 +175,8 @@ def _notify_text(secret_store: SecretStore, suggested: str = "", phone: str = ""
         return 2
     print("Text messages through your mobile carrier's email-to-text address. It is free, but do not rely on it alone:")
     print("  - Verizon is closing its address by 31 March 2027, and AT&T closed its own in 2025.")
-    print("  - Carriers drop some of these messages as spam without telling anyone.")
+    print("  - Carriers drop some of these messages as spam, and block them all for numbers that opted out.")
+    print("    On Verizon, text STATUS to 4040 to see whether your number allows them, and ON to allow them.")
     print("Keep `camsentry-mcp notify ntfy` as a second channel for alerts that matter.\n")
     phone = phone or input("Mobile number (10 digits, US): ")
     carrier = (carrier or input(f"Carrier ({', '.join(TEXT_GATEWAYS)}): ")).strip().lower()
@@ -178,7 +188,11 @@ def _notify_text(secret_store: SecretStore, suggested: str = "", phone: str = ""
     except ValueError as err:
         print(str(err), file=sys.stderr)
         return 1
-    return _notify_email(secret_store, suggested, recipient)
+    if _mailbox(secret_store, suggested) is None:
+        return 1
+    _save_destination(secret_store, text_to=recipient)
+    print(f"Saved to {secret_store.backend_name}. Send a test with `camsentry-mcp notify test`.")
+    return 0
 
 
 def _notify_ntfy(secret_store: SecretStore, settings: Settings) -> int:

@@ -266,12 +266,12 @@ def test_carrier_text_addresses_need_a_ten_digit_us_number(phone: str) -> None:
         text_address(phone, "verizon")
 
 
-def test_mail_to_a_carrier_text_address_is_one_short_line_without_a_subject(store: SecretStore) -> None:
+def test_a_text_through_the_carrier_is_one_short_line_without_a_subject(store: SecretStore) -> None:
     server = FakeMailServer()
-    store.save_notify({**MAILBOX, "email_to": "5550100123@vtext.com"})
+    store.save_notify({**MAILBOX, "email_to": "", "text_to": "5550100123@vtext.com"})
     long_alert = Message("Someone is lingering at Front Door", "A person has been in view for about 7 minutes. " + "They are still standing by the gate. " * 6, urgent=False)
 
-    mailer(store, server).send(URGENT)
+    assert mailer(store, server).send(URGENT).delivered == ["text"]
     mailer(store, server).send(long_alert)
 
     short, cut = server.sent
@@ -280,3 +280,15 @@ def test_mail_to_a_carrier_text_address_is_one_short_line_without_a_subject(stor
     body = cut.get_content().strip()
     assert 150 < len(body) <= 160, "fits in one text message"
     assert body.endswith("...") and body.startswith("Someone is lingering at Front Door: A person")
+    assert (short["From"], short["To"]) == ("me@gmail.com", "5550100123@vtext.com")
+
+
+def test_text_and_email_can_both_be_on_and_each_gets_its_own_form(store: SecretStore) -> None:
+    server = FakeMailServer()
+    store.save_notify({**MAILBOX, "text_to": "5550100123@vtext.com"})
+
+    assert mailer(store, server).send(URGENT).delivered == ["text", "email"]
+
+    as_text, as_email = server.sent
+    assert (as_text["To"], as_text["Subject"]) == ("5550100123@vtext.com", None)
+    assert (as_email["To"], as_email["Subject"]) == ("me@gmail.com", "URGENT: Possible intruder at Front Door")
