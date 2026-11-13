@@ -1,0 +1,21 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.14manj01/camsentry-mcp",
+  "title": "camsentry-mcp",
+  "description": "A local vision model watches your Wyze cameras, remembers what it saw and alerts you. Read-only.",
+  "repository": {
+    "url": "https://github.com/14manj01/camsentry-mcp",
+    "source": "github"
+  },
+  "version": "0.2.0",
+  "packages": [
+    {
+      "registryType": "pypi",
+      "identifier": "camsentry-mcp",
+      "version": "0.2.0",
+      "transport": {
+        "type": "stdio"
+      }
+    }
+  ]
+}

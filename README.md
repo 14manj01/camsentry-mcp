@@ -1,14 +1,15 @@
+<!-- mcp-name: io.github.14manj01/camsentry-mcp -->
 <p align="center">
-  <img src="docs/banner.svg" alt="camsentry-mcp: let a local model watch your Wyze cameras for people, pets, packages and intruders" width="100%">
+  <img src="https://raw.githubusercontent.com/14manj01/camsentry-mcp/main/docs/banner.svg" alt="camsentry-mcp: let a local model watch your Wyze cameras for people, pets, packages and intruders" width="100%">
 </p>
 
 <p align="center">
   <a href="https://github.com/14manj01/camsentry-mcp/actions/workflows/ci.yml"><img src="https://github.com/14manj01/camsentry-mcp/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
-  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue" alt="MIT license"></a>
+  <a href="https://github.com/14manj01/camsentry-mcp/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue" alt="MIT license"></a>
   <img src="https://img.shields.io/badge/python-3.12%20%E2%80%93%203.14-3776AB?logo=python&logoColor=white" alt="Python 3.12 to 3.14">
   <a href="https://modelcontextprotocol.io"><img src="https://img.shields.io/badge/MCP-stdio%20server-111827" alt="MCP stdio server"></a>
   <img src="https://img.shields.io/badge/vision-100%25%20local-22c55e" alt="Vision runs locally">
-  <a href="SECURITY.md"><img src="https://img.shields.io/badge/secrets-OS%20keychain%20only-8b5cf6" alt="Secrets in the OS keychain only"></a>
+  <a href="https://github.com/14manj01/camsentry-mcp/blob/main/SECURITY.md"><img src="https://img.shields.io/badge/secrets-OS%20keychain%20only-8b5cf6" alt="Secrets in the OS keychain only"></a>
 </p>
 
 <p align="center">
@@ -91,7 +92,7 @@ How it compares with what smart-camera services advertise:
 | Alerts that describe what happened | ✅ The local model writes the sentence you receive. |
 | Fewer pointless alerts | ✅ One message when something starts, not one per still. Pets and vehicles stay quiet by default. A person is only reported after a second look agrees. Each camera can be told what it may text about. |
 | Alerts that understand context | ✅ Person lingering, package gone after someone was there, a person during armed hours. |
-| Teach it what to look for | ✅ Watch rules in plain words ("the gate is open"). Approximate: see [accuracy](docs/ACCURACY.md). |
+| Teach it what to look for | ✅ Watch rules in plain words ("the gate is open"). Approximate: see [accuracy](https://github.com/14manj01/camsentry-mcp/blob/main/docs/ACCURACY.md). |
 | Urgent alerts stand out | ✅ Intruder and package-taken alerts are sent with top priority. |
 | Search what the cameras saw in plain words | ✅ "dog in the yard", "white van": over the description of every still. |
 | Timeline of the day | ✅ Stills pieced together into visits, with what changed between them. |
@@ -172,7 +173,7 @@ porch all afternoon is one message. Wyze's own tags (Cam Plus) raise the same al
 
 > [!WARNING]
 > Treat alerts as a prompt to look, not as proof. A small model reading 640×360 stills makes mistakes;
-> [docs/ACCURACY.md](docs/ACCURACY.md) has the numbers. Do not rely on this as your only security system.
+> [docs/ACCURACY.md](https://github.com/14manj01/camsentry-mcp/blob/main/docs/ACCURACY.md) has the numbers. Do not rely on this as your only security system.
 
 ## Notifications
 
@@ -234,7 +235,7 @@ same GPU, the two take turns and both get slower.
 - 🧹 Error messages and logs are scrubbed of tokens, pre-signed image URLs, phone numbers and push topics.
 - 🗂️ What the cameras saw is remembered as text for 30 days in a local database; `camsentry-mcp forget` erases it.
 
-The full threat model, including what a manipulated model can and cannot do, is in [SECURITY.md](SECURITY.md).
+The full threat model, including what a manipulated model can and cannot do, is in [SECURITY.md](https://github.com/14manj01/camsentry-mcp/blob/main/SECURITY.md).
 
 ## Limitations
 
@@ -243,7 +244,7 @@ The full threat model, including what a manipulated model can and cannot do, is 
 - **Not instant.** New stills are fetched every 60 seconds and take about a second each to analyse.
 - **A camera with no events has nothing to analyse.** If a camera shows nothing in the Wyze app's Events tab,
   it shows nothing here.
-- **Accuracy is that of a small model.** See [docs/ACCURACY.md](docs/ACCURACY.md). Watch rules in particular
+- **Accuracy is that of a small model.** See [docs/ACCURACY.md](https://github.com/14manj01/camsentry-mcp/blob/main/docs/ACCURACY.md). Watch rules in particular
   can call a false statement true.
 - **No faces, no live view, no device control.**
 - Wyze has no official public API. This project uses the community
@@ -265,5 +266,5 @@ python -m venv .venv
 ---
 
 <p align="center">
-  <sub>Not affiliated with, endorsed by or sponsored by Wyze Labs, Inc. Wyze is a trademark of Wyze Labs, Inc.<br>Released under the <a href="LICENSE">MIT license</a>.</sub>
+  <sub>Not affiliated with, endorsed by or sponsored by Wyze Labs, Inc. Wyze is a trademark of Wyze Labs, Inc.<br>Released under the <a href="https://github.com/14manj01/camsentry-mcp/blob/main/LICENSE">MIT license</a>.</sub>
 </p>
