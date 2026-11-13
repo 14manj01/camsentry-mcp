@@ -47,7 +47,7 @@ Your chat model can ask it anything: *"what happened out back today?"*, *"find t
 no Docker, no GPU libraries, no accounts with anyone but Wyze.
 
 ```sh
-pipx install git+https://github.com/14manj01/camsentry-mcp   # or: uv tool install git+https://...
+pipx install camsentry-mcp                                    # or: uv tool install camsentry-mcp
 ollama pull qwen2.5vl:3b                                      # the 3 GB vision model that looks at the stills
 camsentry-mcp setup                                           # sign in to Wyze, choose how to be notified
 ```
